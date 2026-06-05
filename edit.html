@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canvas Editor</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="editor-frame">
+
+<!-- ===========================
+    TOP UI (CONTROL LAYER)
+=========================== -->
+<div class="top-ui">
+
+ <!-- Start Over ONLY affects canvas + thumbnail sync -->
+ <button type="button" class="start-over" id="startOverBtn">
+   Start Over
+ </button>
+
+ <span class="instructions">
+   Click, move, rotate.<br>
+   Drag outside to remove
+ </span>
+
+ <!-- Opens preview modal (read-only snapshot) -->
+ <button type="button" id="previewBtn">
+   Preview
+ </button>
+
+</div>
+
+
+<!-- ===========================
+    THUMBNAIL INVENTORY LAYER
+=========================== -->
+<!--
+Each thumbnail MUST track:
+- available count (0–3)
+- canvas usage sync
+- visual state (grey = empty, white = active)
+-->
+
+<div class="thumb-bar">
+
+ <div class="thumb" data-index="0"></div>
+ <div class="thumb" data-index="1"></div>
+ <div class="thumb" data-index="2"></div>
+ <div class="thumb" data-index="3"></div>
+ <div class="thumb" data-index="4"></div>
+ <div class="thumb" data-index="5"></div>
+ <div class="thumb" data-index="6"></div>
+ <div class="thumb" data-index="7"></div>
+
+</div>
+
+
+<!-- ===========================
+    CANVAS LAYER (SOURCE OF TRUTH)
+=========================== -->
+<div class="canvas-container">
+
+ <div class="canvas-wrap" id="canvas"></div>
+
+</div>
+
+
+<!-- ===========================
+    PREVIEW MODAL (READ ONLY STATE)
+=========================== -->
+<div id="previewModal">
+
+ <div class="modal-content">
+
+   <h2>Preview Your Design</h2>
+
+   <p>$5 to bring your design to life.</p>
+
+   <!-- scaled clone of canvas state -->
+   <div class="preview-area">
+     <div id="previewCanvas"></div>
+   </div>
+
+<div class="purchase-block">
+  <div class="button-row">
+    <button id="editBtn">Edit</button>
+    <button id="purchaseBtn">Purchase</button>
+  </div>
+  <div id="slotCaption" class="slot-caption">
+  <span id="slotCaptionText"></span>
+</div>
+</div>
+
+</div> <!-- .modal-content -->
+</div> <!-- #previewModal -->
+
+<!-- SUCCESS MODAL -->
+<div id="successModal">
+  <div class="success-content">
+    <h2>Your design is in production</h2>
+    <p>Come back in <span id="countdownDisplay">20:00</span>,or</p>
+    <button type="button" id="notifyBtn">Notify Me</button>
+    <p>Try a new design?</p>
+    <button type="button" id="backToEditBtn">Back to Edit</button>
+  </div>
+</div>
+
+<div id="expiredModal">
+  <div class="success-content">
+    <h2>Your slot expired</h2>
+    <p>Your design is still saved. You may close this window, go back to the editor, or try purchasing again if the slot is free.</p>
+    <button type="button" id="expiredPurchaseBtn">Try Purchase Again</button>
+    <button type="button" id="expiredOkBtn">Back to Editor</button>
+  </div>
+</div>
+
+<!-- ===========================
+    SCRIPT ENTRY POINT
+=========================== -->
+<script src="script.js"></script>
+
+</body>
+</html>

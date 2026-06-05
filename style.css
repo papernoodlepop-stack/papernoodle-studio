@@ -1,0 +1,453 @@
+/* ===========================
+  BASE RESET
+=========================== */
+html,
+body {
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.top-ui,
+.top-ui *,
+.thumb-bar,
+.thumb,
+.canvas-wrap,
+.canvas-container,
+button,
+span,
+div {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: sans-serif;
+  background: #222;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* ===========================
+  EDITOR FRAME
+=========================== */
+.editor-frame {
+  width: min(360px, 88vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 6px;
+  gap: 12px;
+}
+
+.top-ui,
+.thumb-bar,
+.canvas-container {
+  display: block;
+  width: 100%;
+}
+
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* ===========================
+  TOP UI
+=========================== */
+.top-ui {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  padding: 8px 12px;
+  font-size: 14px;
+  background: #222;
+}
+
+.top-ui * {
+  touch-action: manipulation;
+}
+
+.top-ui span {
+  text-align: center;
+  line-height: 1.4;
+}
+
+.top-ui button {
+  padding: 5px 4px;
+  font-size: 14px;
+  border-radius: 12px;
+}
+
+/* ===========================
+  THUMB GRID
+=========================== */
+.thumb-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 60px);
+  grid-template-rows: repeat(2, 60px);
+  gap: 15px 30px;
+  justify-content: center;
+  align-items: center;
+}
+
+.thumb {
+  width: 60px;
+  height: 60px;
+  border: 2px solid black;
+  background-color: #7a7a7a;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  touch-action: manipulation;
+}
+
+.thumb.empty {
+  background: #777;
+  touch-action: manipulation;
+}
+
+/* ===========================
+  CANVAS
+=========================== */
+.canvas-container {
+  display: flex;
+  justify-content: center;
+}
+
+.canvas-wrap {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  aspect-ratio: 5 / 7;
+  position: relative;
+  overflow: hidden;
+  background: #7a7a7a;
+  border: 2px solid #000;
+  touch-action: manipulation;
+}
+
+.canvas-wrap.previewing {
+  transform: scale(0.95);
+  opacity: 0.3;
+}
+
+/* ===========================
+  BOX
+=========================== */
+.box {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  opacity: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  will-change: transform;
+}
+
+.rotator {
+  width: 100%;
+  height: 100%;
+  transform-origin: center;
+}
+
+.image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  user-select: none;
+}
+
+.svg-art {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* ===========================
+  HANDLE
+=========================== */
+.handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  color: #000;
+  width: 44px;
+  height: 44px;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.box.dragging .handle,
+.box.rotating .handle {
+  opacity: 1;
+}
+
+/* ===========================
+  PREVIEW MODAL
+=========================== */
+body.modal-open {
+  overflow: hidden;
+}
+
+.preview-area {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+#previewCanvas {
+  position: relative;
+  width: min(420px, 92vw);
+  aspect-ratio: 5/7;
+  background: #888;
+  border: 2px solid black;
+  overflow: hidden;
+}
+
+#previewModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+#previewModal.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+#expiredModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(20px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+#expiredModal.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.modal-content {
+  width: min(360px, 88vw);
+  max-height: 85dvh;
+  background: #111;
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ===========================
+  PREVIEW MODAL BUTTONS
+=========================== */
+.button-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 40px;
+  width: 100%;
+  transform: translateY(-20px);
+}
+
+#purchaseBtn,
+#editBtn {
+  font-size: 16px;
+  font-weight: 800;
+  padding: 9px 14px;
+  border: none;
+  border-radius: 5px;
+  display: inline-flex;
+  justify-content: center;
+  min-width: 80px;
+  height: 40px;
+  align-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+/* GREEN — slot is open */
+#purchaseBtn {
+  background: #00c853;
+  color: #fff;
+  width: 140px;
+}
+
+/* RED — slot taken, counting down */
+#purchaseBtn.locked {
+  background: #e53935;
+  color: #fff;
+  cursor: not-allowed;
+}
+
+#editBtn {
+  background: #fff;
+  color: #000;
+  justify-self: start;
+  width: 60px;
+}
+
+.slot-caption {
+  overflow: hidden;
+  white-space: nowrap;
+  height: 16px;
+  margin-top: 4px;
+  font-size: 14px;
+  color: #aaa;
+  display: none;
+  width: 240px;
+}
+
+.slot-caption.visible {
+  display: block;
+}
+
+.slot-caption span {
+  display: inline-block;
+  padding-right: inline-block;
+  animation: marquee 20s linear infinite;
+}
+
+@keyframes marquee {
+  0%   { transform: translateX(240px); }
+  100% { transform: translateX(-371px); }
+}
+
+/* ===========================
+  SUCCESS MODAL
+=========================== */
+#successModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(20px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+#successModal.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.success-content {
+  width: min(360px, 88vw);
+  min-height: 420px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: #111;
+  border-radius: 12px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  color: white;
+  gap: 18px;
+}
+
+.success-content h2 {
+  line-height: 1.4;
+  margin: 0;
+}
+
+.success-content p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.success-content button {
+  width: 50%;
+  padding: 12px 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  margin: 0;
+  min-height: 44px;
+}
+
+#notifyBtn {
+  background: #ffffff;
+  color: #000;
+}
+
+#backToEditBtn {
+  background: transparent;
+  border: 1px solid #fff;
+  color: #fff;
+}
+
+/* ===========================
+  MOBILE
+=========================== */
+@media (max-width: 600px) {
+  .top-ui {
+    gap: 24px;
+    padding: 8px 6px;
+  }
+}

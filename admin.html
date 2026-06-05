@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyanotype Admin</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0f0f0f;
+    color: #e0e0e0;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 24px; color: #fff; }
+  h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #aaa;
+       text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .btn-done {
+    background: #00c853; color: #000;
+    width: 100%; padding: 14px;
+    font-size: 15px; font-weight: 600;
+    border: none; border-radius: 8px;
+    cursor: pointer; margin-bottom: 20px;
+    display: none;
+  }
+  .btn-done.visible { display: block; }
+
+  #slot-status {
+    background: #1a1a1a; border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+
+  #status-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: #555; flex-shrink: 0; transition: background 0.3s;
+  }
+  #status-dot.idle            { background: #00c853; }
+  #status-dot.reserved        { background: #ff9800; }
+  #status-dot.pending_payment { background: #ff9800; }
+  #status-dot.production      { background: #e53935; animation: pulse 1s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+
+  #status-info   { flex: 1; }
+  #status-text   { font-size: 15px; }
+
+  #status-countdown-wrap {
+    display: flex; flex-direction: column;
+    align-items: flex-end; gap: 2px; min-width: 72px;
+  }
+  #status-countdown {
+    font-size: 26px; font-weight: 700; color: #fff;
+    text-align: right; font-variant-numeric: tabular-nums; letter-spacing: -0.5px;
+  }
+  #status-countdown.overtime { color: #e53935; }
+  #countdown-label {
+    font-size: 10px; color: #555; text-align: right;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+
+  #orders-list { display: flex; flex-direction: column; gap: 20px; }
+
+  .order-card {
+    background: #1a1a1a; border-radius: 12px;
+    padding: 20px; display: flex; flex-direction: column; gap: 16px;
+  }
+  .order-card.latest { border: 1px solid #00c853; }
+
+  .order-meta        { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #888; }
+  .order-meta strong { color: #fff; font-size: 15px; }
+  .order-amount      { font-size: 20px; font-weight: 700; color: #00c853; }
+
+  .design-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+  .design-canvas-container {
+    position: relative; width: 180px; aspect-ratio: 5/7;
+    background: #7a7a7a; border: 2px solid #888;
+    border-radius: 4px; overflow: hidden; flex-shrink: 0;
+  }
+  .design-box {
+    position: absolute; background-size: cover;
+    background-position: center; border: 1px solid #fff;
+  }
+  .design-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  button { padding: 8px 16px; border: none; border-radius: 8px;
+           font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-save { background: #fff; color: #000; }
+
+  .empty-state { color: #555; font-size: 14px; padding: 40px 0; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>Cyanotype Admin</h1>
+<button id="doneBtn" class="btn-done">Mark Done &amp; Notify</button>
+
+<div id="slot-status">
+  <div id="status-dot"></div>
+  <div id="status-info"><div id="status-text">Connecting…</div></div>
+  <div id="status-countdown-wrap">
+    <div id="status-countdown"></div>
+    <div id="countdown-label"></div>
+  </div>
+</div>
+
+<h2>Orders</h2>
+<div id="orders-list"><p class="empty-state">Loading…</p></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const THUMB_IMAGES = [0,1,2,3,4,5,6,7].map(i => `/thumb/${i}`);
+const CANVAS_W = 180, CANVAS_H = CANVAS_W * 7 / 5;
+const BOX_W = CANVAS_W / 3, BOX_H = BOX_W * 2;
+
+// ── DOM ──────────────────────────────────────────────────────────────────────
+const dot            = document.getElementById("status-dot");
+const statusTxt      = document.getElementById("status-text");
+const countdownEl    = document.getElementById("status-countdown");
+const countdownLabel = document.getElementById("countdown-label");
+const doneBtn        = document.getElementById("doneBtn");
+
+// ── SSE STATE ─────────────────────────────────────────────────────────────────
+// lastData:        most recent SSE payload
+// anchorWall:      performance.now() when that payload arrived
+// anchorServerNow: server's Date.now() in that payload
+// Together these let the ticker interpolate server time between SSE messages.
+let lastData        = null;
+let anchorWall      = null;
+let anchorServerNow = null;
+
+// ── SSE CONNECTION ────────────────────────────────────────────────────────────
+const STATUS_LABELS = {
+  idle:            "Slot open",
+  reserved:        "Checkout in progress",
+  pending_payment: "Payment pending",
+  production:      "In production",
+};
+
+function connectSSE() {
+  const sse = new EventSource("/admin/events");
+
+  sse.onmessage = (e) => {
+    const d        = JSON.parse(e.data);
+    lastData       = d;
+    anchorWall     = performance.now();
+    anchorServerNow = d.now;
+
+    dot.className         = d.status;
+    statusTxt.textContent = STATUS_LABELS[d.status] || d.status;
+    doneBtn.classList.toggle("visible", d.status === "production");
+  };
+
+  sse.onerror = () => {
+    sse.close();
+    lastData = anchorWall = anchorServerNow = null;
+    statusTxt.textContent = "Reconnecting…";
+    dot.className = "";
+    setTimeout(connectSSE, 2000);
+  };
+}
+
+connectSSE();
+
+// ── COUNTDOWN TICKER ─────────────────────────────────────────────────────────
+// Runs every 200 ms. Interpolates server time so display ticks smoothly
+// even though SSE only arrives every 1 s.
+setInterval(() => {
+  if (!lastData) {
+    countdownEl.textContent    = "";
+    countdownLabel.textContent = "";
+    return;
+  }
+
+  // Estimate current server time
+  const elapsed   = anchorWall != null ? performance.now() - anchorWall : 0;
+  const serverNow = anchorServerNow != null ? anchorServerNow + elapsed : Date.now();
+
+  const { status, reservationEndsAt, productionEndsAt } = lastData;
+
+  if (status === "idle") {
+    countdownEl.textContent    = "";
+    countdownLabel.textContent = "";
+    countdownEl.classList.remove("overtime");
+    return;
+  }
+
+  if (status === "reserved" || status === "pending_payment") {
+    // Reservation countdown — clamp at 0
+    const secs = reservationEndsAt
+      ? Math.max(0, Math.ceil((reservationEndsAt - serverNow) / 1000))
+      : 0;
+    countdownEl.textContent    = formatSecs(secs);
+    countdownLabel.textContent = "reservation";
+    countdownEl.classList.remove("overtime");
+    return;
+  }
+
+  if (status === "production") {
+    // Production — go negative (overtime) after expected end, until Done clicked
+    const secs = productionEndsAt
+      ? Math.ceil((productionEndsAt - serverNow) / 1000)
+      : 0;
+
+    if (secs > 0) {
+      countdownEl.textContent    = formatSecs(secs);
+      countdownLabel.textContent = "production";
+      countdownEl.classList.remove("overtime");
+    } else {
+      countdownEl.textContent    = "+" + formatSecs(-secs);
+      countdownLabel.textContent = "overtime";
+      countdownEl.classList.add("overtime");
+    }
+    return;
+  }
+
+  countdownEl.textContent    = "";
+  countdownLabel.textContent = "";
+}, 200);
+
+function formatSecs(totalSecs) {
+  const t = Math.round(Math.abs(totalSecs));
+  const m = Math.floor(t / 60);
+  const s = t % 60;
+  return m > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${s}s`;
+}
+
+// ── ORDERS ────────────────────────────────────────────────────────────────────
+async function loadOrders() {
+  const res    = await fetch("/admin/orders");
+  const orders = await res.json();
+  renderOrders(orders);
+}
+
+function renderOrders(orders) {
+  const list = document.getElementById("orders-list");
+  if (!orders.length) {
+    list.innerHTML = '<p class="empty-state">No orders yet.</p>';
+    return;
+  }
+  list.innerHTML = "";
+  orders.forEach((order, idx) => {
+    const card = document.createElement("div");
+    card.className = "order-card" + (idx === 0 ? " latest" : "");
+    const paid   = new Date(order.paidAt);
+    const amount = ((order.amount || 0) / 100).toFixed(2);
+    card.innerHTML = `
+      <div class="order-meta">
+        <strong>${paid.toLocaleDateString()} ${paid.toLocaleTimeString()}${idx === 0 ? " — Latest" : ""}</strong>
+        <span>Order: ${order.id}</span>
+        <span>Stripe: ${order.stripeSession}</span>
+        ${order.customerEmail ? `<span>Email: ${order.customerEmail}</span>` : ""}
+        ${order.customerPhone ? `<span>Phone: ${order.customerPhone}</span>` : ""}
+      </div>
+      <div class="order-amount">$${amount}</div>
+      <div class="design-wrap">
+        <div class="design-canvas-container" id="canvas-${idx}"></div>
+        <div class="design-actions">
+          <button class="btn-save" onclick="saveAsPNG(${idx})">Save as PNG</button>
+        </div>
+      </div>`;
+    list.appendChild(card);
+    requestAnimationFrame(() => renderDesign(order.layout, idx));
+  });
+}
+
+function renderDesign(layout, idx) {
+  const container = document.getElementById(`canvas-${idx}`);
+  if (!container || !layout) return;
+  layout.forEach(b => {
+    const el             = document.createElement("div");
+    el.className         = "design-box";
+    el.style.left            = (b.left * CANVAS_W) + "px";
+    el.style.top             = (b.top  * CANVAS_H) + "px";
+    el.style.width           = BOX_W + "px";
+    el.style.height          = BOX_H + "px";
+    el.style.transform       = `rotate(${b.rotation || 0}rad)`;
+    el.style.backgroundImage = `url('${THUMB_IMAGES[b.origin]}')`;
+    container.appendChild(el);
+  });
+}
+
+async function saveAsPNG(idx) {
+  const container = document.getElementById(`canvas-${idx}`);
+  if (!container) return;
+  const scale = 4;
+  const oc    = document.createElement("canvas");
+  oc.width    = CANVAS_W * scale;
+  oc.height   = CANVAS_H * scale;
+  const ctx   = oc.getContext("2d");
+  ctx.fillStyle   = "#7a7a7a";
+  ctx.fillRect(0, 0, oc.width, oc.height);
+  ctx.strokeStyle = "#000"; ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, oc.width - 2, oc.height - 2);
+  for (const box of container.querySelectorAll(".design-box")) {
+    await new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const left = parseFloat(box.style.left) * scale;
+        const top  = parseFloat(box.style.top)  * scale;
+        const w = BOX_W * scale, h = BOX_H * scale;
+        const rot = parseFloat((box.style.transform.match(/rotate\(([^)]+)rad\)/) || [])[1] || 0);
+        ctx.save();
+        ctx.translate(left + w / 2, top + h / 2);
+        ctx.rotate(rot);
+        ctx.drawImage(img, -w / 2, -h / 2, w, h);
+        ctx.restore();
+        resolve();
+      };
+      img.onerror = resolve;
+      img.src = box.style.backgroundImage.replace(/url\(["']?/, "").replace(/["']?\)$/, "");
+    });
+  }
+  const a    = document.createElement("a");
+  a.href     = oc.toDataURL("image/png");
+  a.download = `order-${idx + 1}-${new Date().toISOString().slice(0, 10)}.png`;
+  a.click();
+}
+
+// ── DONE BUTTON ───────────────────────────────────────────────────────────────
+doneBtn.addEventListener("click", async () => {
+  try {
+    doneBtn.disabled    = true;
+    doneBtn.textContent = "Processing…";
+    await fetch("/admin/done", { method: "POST" });
+  } finally {
+    doneBtn.disabled    = false;
+    doneBtn.textContent = "Mark Done & Notify";
+  }
+});
+
+loadOrders();
+</script>
+</body>
+</html>
