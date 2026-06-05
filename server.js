@@ -11,7 +11,7 @@ const path    = require("path");
 // ─────────────────────────────────────────
 const CONFIG = {
   port:           3000,
-  frontendUrl:    "http://192.168.0.31:3000",
+  frontendUrl:    "https://cyanotype-app-1.onrender.com",
   reservationTTL: 1 * 60 * 1000,   // 1 min
   productionTTL:  30 * 1000,        // 30 sec
 };
