@@ -57,9 +57,6 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.static(__dirname));
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'edit.html'));
-});
 app.use((req, res, next) => {
   if (req.path === "/webhook") return next();
   express.json()(req, res, next);
@@ -125,22 +122,15 @@ setInterval(async () => {
 }, 1_000);
 
 // ─────────────────────────────────────────
-//  THUMB IMAGES
+//  THUMB IMAGES — serve SVG files by name
 // ─────────────────────────────────────────
-app.get("/thumb/:index", (req, res) => {
-  const i      = parseInt(req.params.index);
-  const colors = ["FF0000","00FF00","FF0000","00FF00","FF0000","00FF00","FF0000","00FF00"];
-  const color  = colors[i] || "888888";
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="240">
-  <rect width="120" height="240" fill="#${color}"/>
-  <text x="60" y="128" font-family="sans-serif" font-size="48" font-weight="bold"
-        fill="#000" text-anchor="middle" dominant-baseline="central">${i + 1}</text>
-</svg>`;
-
+app.get("/thumb/:name", (req, res) => {
+  const name = req.params.name;
+  const file = path.join(__dirname, name);
+  if (!fs.existsSync(file)) return res.status(404).send("Not found");
   res.setHeader("Content-Type",  "image/svg+xml");
   res.setHeader("Cache-Control", "public, max-age=86400");
-  res.send(svg);
+  res.sendFile(file);
 });
 
 // ─────────────────────────────────────────
@@ -245,8 +235,9 @@ app.post("/create-checkout-session", async (req, res) => {
     return res.json({ url: session.url });
 
   } catch (err) {
+    console.error("[checkout] Stripe error:", err.message);
     slot.status = "reserved";
-    return res.status(500).json({ error: "Failed to create checkout session" });
+    return res.status(500).json({ error: err.message });
   }
 });
 
