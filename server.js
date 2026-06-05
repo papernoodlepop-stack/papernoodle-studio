@@ -57,6 +57,8 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.static(__dirname));
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "edit.html")));
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "edit.html")));
 app.use((req, res, next) => {
   if (req.path === "/webhook") return next();
   express.json()(req, res, next);
