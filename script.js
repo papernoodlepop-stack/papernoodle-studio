@@ -7,16 +7,15 @@ syncInterval:  1_000,
 snapThreshold: 0.25,
 thumbLimits:   [1, 5, 1, 2, 1, 5, 1, 3],
 thumbImages: [
-  "branch.svg",
-  "bubble.svg",
-  "cockatoo.svg",
-  "fuchsia.svg",
-  "grass.svg",
-  "heart.svg",
-  "hummingbird.svg",
-  "spiral.svg"
-].map(name => `/thumb/${name}`),
-
+  "/branch.svg",
+  "/bubble.svg",
+  "/cockatoo.svg",
+  "/fuchsia.svg",
+  "/grass.svg",
+  "/heart.svg",
+  "/hummingbird.svg",
+  "/spiral.svg"
+],
 thumbBaseSizes: [
   1.4, // branch
   0.2, // bubble (tiny)
@@ -43,36 +42,26 @@ const s = {
   bootComplete:       false,
 };
 
-
 return {
   get: (key) => s[key],
-
-
   get mode() { return s.mode; },
-
 
   get reservationActive() {
     return !!s.reservationEndsAt && Date.now() < s.reservationEndsAt;
   },
 
-
   get productionActive() {
-    // Rule 4: production is active until server says otherwise (admin clicks done)
-    // We rely on server sync to clear this — do NOT expire client-side
     return !!s.productionEndsAt;
   },
-
 
   get checkoutBlocked() {
     return this.reservationActive || this.productionActive;
   },
 
-
   set(patch) {
     Object.assign(s, patch);
     UI.render();
   },
-
 
   setMode(newMode) {
     if (s.mode === newMode) return;
@@ -85,7 +74,6 @@ return {
     }
     UI.render();
   },
-
 
   forceEdit(patch = {}) {
     s.mode               = "edit";
@@ -130,32 +118,21 @@ thumbs:             document.querySelectorAll(".thumb"),
 const Thumbs = (() => {
 let counts = [...CONFIG.thumbLimits];
 
-
 function render() {
   const disabled = State.get("checkoutInProgress");
-
   DOM.thumbs.forEach((el, i) => {
     const empty = counts[i] <= 0;
-
-    // state classes
     el.classList.toggle("empty", empty);
-
-    // interaction state
-    el.style.pointerEvents = (empty || disabled) ? "none" : "auto";
-    el.style.opacity = (empty || disabled) ? "0.4" : "1";
-
-    // ✅ SET IMAGE HERE (important missing piece)
-    el.style.backgroundImage = `url(${CONFIG.thumbImages[i]})`;
-    el.style.backgroundSize = "contain";
-    el.style.backgroundRepeat = "no-repeat";
+    el.style.pointerEvents      = (empty || disabled) ? "none" : "auto";
+    el.style.opacity            = (empty || disabled) ? "0.4"  : "1";
+    el.style.backgroundImage    = `url('${CONFIG.thumbImages[i]}')`;
+    el.style.backgroundSize     = "contain";
+    el.style.backgroundRepeat   = "no-repeat";
     el.style.backgroundPosition = "center";
-
-    // badge
     const badge = el.querySelector(".thumb-count");
     if (badge) badge.textContent = counts[i];
   });
 }
-
 
 function use(i) {
   if (counts[i] <= 0) return false;
@@ -164,17 +141,14 @@ function use(i) {
   return true;
 }
 
-
 function release(i) {
   counts[i] = Math.min(CONFIG.thumbLimits[i], counts[i] + 1);
   render();
 }
 
-
 function getCounts()      { return [...counts]; }
 function setCounts(saved) { counts = saved ? [...saved] : [...CONFIG.thumbLimits]; render(); }
 function reset()          { counts = [...CONFIG.thumbLimits]; render(); }
-
 
 return { render, use, release, getCounts, setCounts, reset };
 })();
@@ -190,18 +164,18 @@ const K = {
   resEndsAt: "reservationEndsAt",
 };
 
-
 function save() {
   const rect   = DOM.canvas.getBoundingClientRect();
   const layout = [...DOM.canvas.querySelectorAll(".box")].map(b => ({
-    left:     b.offsetLeft / rect.width,
-    top:      b.offsetTop  / rect.height,
-    origin:   b.dataset.origin,
-    rotation: parseFloat(b.dataset.rotation || 0),
+    left:      b.offsetLeft / rect.width,
+    top:       b.offsetTop  / rect.height,
+    origin:    b.dataset.origin,
+    rotation:  parseFloat(b.dataset.rotation || 0),
+    scale:     parseFloat(b.dataset.scale    || 1),
+    baseScale: parseFloat(b.dataset.baseScale|| 1),
   }));
   localStorage.setItem(K.design, JSON.stringify({ layout, thumbCounts: Thumbs.getCounts() }));
 }
-
 
 function load() {
   const raw = localStorage.getItem(K.design);
@@ -212,16 +186,13 @@ function load() {
   }
 }
 
-
-function clearAll()           { Object.values(K).forEach(k => localStorage.removeItem(k)); }
-function clearReservation()   { localStorage.removeItem(K.resId); localStorage.removeItem(K.resEndsAt); }
-
+function clearAll()         { Object.values(K).forEach(k => localStorage.removeItem(k)); }
+function clearReservation() { localStorage.removeItem(K.resId); localStorage.removeItem(K.resEndsAt); }
 
 function saveReservation(id, endsAt) {
   localStorage.setItem(K.resId,     id);
   localStorage.setItem(K.resEndsAt, endsAt);
 }
-
 
 function loadReservation() {
   return {
@@ -229,7 +200,6 @@ function loadReservation() {
     endsAt: parseInt(localStorage.getItem(K.resEndsAt), 10) || null,
   };
 }
-
 
 return { save, load, clearAll, clearReservation, saveReservation, loadReservation };
 })();
@@ -244,46 +214,39 @@ function hasBoxes() {
 }
 
 function applyTransform(box) {
-  const rot = parseFloat(box.dataset.rotation || 0);
-  const scale = parseFloat(box.dataset.scale || 1);
+  const rot       = parseFloat(box.dataset.rotation  || 0);
+  const scale     = parseFloat(box.dataset.scale     || 1);
   const baseScale = parseFloat(box.dataset.baseScale || 1);
-
-  const finalScale = scale * baseScale;
-
-  box.style.transform = `rotate(${rot}rad) scale(${finalScale})`;
+  box.style.transform = `rotate(${rot}rad) scale(${scale * baseScale})`;
 }
 
 function createBox(x, y, i) {
-  const box = document.createElement("div");
-  box.className = "box";
-  box.style.left = x + "px";
-  box.style.top = y + "px";
+  const box             = document.createElement("div");
+  box.className         = "box";
+  box.style.left        = x + "px";
+  box.style.top         = y + "px";
+  box.dataset.origin    = String(i);
+  box.dataset.rotation  = "0";
+  box.dataset.scale     = "1";
+  box.dataset.baseScale = String(CONFIG.thumbBaseSizes?.[i] ?? 1);
 
-  box.dataset.origin = String(i);
-  box.dataset.rotation = "0";
-  box.dataset.scale = "1";
-  box.dataset.baseScale = CONFIG.thumbBaseSizes?.[i] ?? 1;
-
-  const rotator = document.createElement("div");
+  const rotator     = document.createElement("div");
   rotator.className = "rotator";
 
-  const img = document.createElement("div");
-  img.className = "image";
-  img.innerHTML = `<img src="${CONFIG.thumbImages[i]}" class="svg-art" />`;
+  const img         = document.createElement("div");
+  img.className     = "image";
+  img.innerHTML     = `<img src="${CONFIG.thumbImages[i]}" class="svg-art" draggable="false" />`;
 
-  const handle = document.createElement("div");
-  handle.className = "handle";
-  handle.innerHTML = `
+  const handle      = document.createElement("div");
+  handle.className  = "handle";
+  handle.innerHTML  = `
     <svg viewBox="0 0 24 24" width="20" height="20">
       <path d="M21 12a9 9 0 1 1-3-6.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       <polyline points="21 3 21 8 16 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  `;
+    </svg>`;
 
   rotator.append(img, handle);
   box.appendChild(rotator);
-
-  // IMPORTANT: no duplicate transform logic here
   applyTransform(box);
 
   handle.addEventListener("pointerdown", e => {
@@ -302,32 +265,31 @@ function createBox(x, y, i) {
   return box;
 }
 
-
 function restore() {
   const data = Storage.load();
   if (!data) return;
   const rect = DOM.canvas.getBoundingClientRect();
   DOM.canvas.innerHTML = "";
   data.layout.forEach(b => {
-    const box            = createBox(b.left * rect.width, b.top * rect.height, b.origin);
-    box.dataset.rotation = b.rotation || 0;
+    const box             = createBox(b.left * rect.width, b.top * rect.height, b.origin);
+    box.dataset.rotation  = b.rotation  || 0;
+    box.dataset.scale     = b.scale     || 1;
+    box.dataset.baseScale = b.baseScale || (CONFIG.thumbBaseSizes?.[b.origin] ?? 1);
+    applyTransform(box);
     DOM.canvas.appendChild(box);
   });
   Thumbs.setCounts(data.thumbCounts);
 }
-
 
 function clear() {
   DOM.canvas.innerHTML = "";
   Thumbs.reset();
 }
 
-
 function startDrag(box, e) {
   box.classList.add("dragging");
   const ox = e.clientX - box.offsetLeft;
   const oy = e.clientY - box.offsetTop;
-
 
   function onMove(ev) {
     const { width, height } = DOM.canvas.getBoundingClientRect();
@@ -339,7 +301,6 @@ function startDrag(box, e) {
     box.style.top  = clamp(ev.clientY - oy, -ay, height - (h - ay)) + "px";
   }
 
-
   function onUp(ev) {
     document.removeEventListener("pointermove", onMove);
     document.removeEventListener("pointerup",   onUp);
@@ -350,49 +311,39 @@ function startDrag(box, e) {
     UI.render();
   }
 
-
   document.addEventListener("pointermove", onMove);
   document.addEventListener("pointerup",   onUp);
 }
 
-
 function startRotate(box, e) {
   box.classList.add("rotating");
-
-  const r0 = box.getBoundingClientRect();
-  const cx = r0.left + r0.width / 2;
-  const cy = r0.top + r0.height / 2;
-
-  const a0 = Math.atan2(e.clientY - cy, e.clientX - cx);
+  const r0   = box.getBoundingClientRect();
+  const cx   = r0.left + r0.width  / 2;
+  const cy   = r0.top  + r0.height / 2;
+  const a0   = Math.atan2(e.clientY - cy, e.clientX - cx);
   const rot0 = parseFloat(box.dataset.rotation || 0);
 
   function onMove(ev) {
-    const r = box.getBoundingClientRect();
-    const a = Math.atan2(
-      ev.clientY - (r.top + r.height / 2),
-      ev.clientX - (r.left + r.width / 2)
-    );
-
-    let diff = a - a0;
-    if (diff > Math.PI) diff -= 2 * Math.PI;
+    const r    = box.getBoundingClientRect();
+    const a    = Math.atan2(ev.clientY - (r.top + r.height / 2), ev.clientX - (r.left + r.width / 2));
+    let diff   = a - a0;
+    if (diff >  Math.PI) diff -= 2 * Math.PI;
     if (diff < -Math.PI) diff += 2 * Math.PI;
-
     box.dataset.rotation = rot0 + diff;
     applyTransform(box);
   }
 
-  function onUp(ev) {
-  document.removeEventListener("pointermove", onMove);
-  document.removeEventListener("pointerup", onUp);
-
-  box.classList.remove("rotating");
-  applyTransform(box); // 👈 force final state
-}
+  function onUp() {
+    document.removeEventListener("pointermove", onMove);
+    document.removeEventListener("pointerup",   onUp);
+    box.classList.remove("rotating");
+    applyTransform(box);
+    Storage.save();
+  }
 
   document.addEventListener("pointermove", onMove);
-  document.addEventListener("pointerup", onUp);
+  document.addEventListener("pointerup",   onUp);
 }
-
 
 function checkOutside(box) {
   const cr     = DOM.canvas.getBoundingClientRect();
@@ -407,7 +358,6 @@ function checkOutside(box) {
     UI.render();
   }
 }
-
 
 return { hasBoxes, createBox, restore, clear };
 })();
@@ -424,22 +374,17 @@ function setBtn(el, disabled, text) {
   if (text !== undefined) el.textContent = text;
 }
 
-
 function render() {
   if (!State.get("bootComplete")) return;
   const boxes           = Canvas.hasBoxes();
   const checkoutBlocked = State.checkoutBlocked;
   const inProduction    = !!State.get("productionEndsAt");
 
-
-  // Purchase button base state — label updated by updatePurchaseButton ticker
   setBtn(DOM.purchaseBtn, !boxes || checkoutBlocked);
   setBtn(DOM.previewBtn,  !boxes);
   DOM.purchaseBtn?.classList.toggle("locked", checkoutBlocked);
   Thumbs.render();
 
-
-  // caption — only during checkout phase, not production
   if (DOM.slotCaption && DOM.slotCaptionText) {
     if (checkoutBlocked && !inProduction) {
       DOM.slotCaptionText.textContent = "Checkout in progress — stick around in case of cancellation";
@@ -451,20 +396,17 @@ function render() {
   }
 }
 
-
 function closeModals() {
   DOM.previewModal?.classList.remove("active");
   DOM.successModal?.classList.remove("active");
   DOM.expiredModal?.classList.remove("active");
 }
 
-
 function openPreview() {
   if (!Canvas.hasBoxes()) return;
   renderPreviewCanvas();
   DOM.previewModal?.classList.add("active");
 }
-
 
 function openSuccess() {
   closeModals();
@@ -476,12 +418,10 @@ function openSuccess() {
   startCountdown(secs);
 }
 
-
 function openExpired() {
   closeModals();
   DOM.expiredModal?.classList.add("active");
 }
-
 
 function renderPreviewCanvas() {
   DOM.previewCanvas.innerHTML = "";
@@ -503,12 +443,6 @@ function renderPreviewCanvas() {
   });
 }
 
-
-// ─────────────────────────────────────────
-//  PURCHASE BUTTON TICKER
-//  Rule 5: count down when slot taken / production active
-//  Rule 6: show "Almost" when production countdown ≤ 30s
-// ─────────────────────────────────────────
 function updatePurchaseButton() {
   const btn = DOM.purchaseBtn;
   if (!btn) return;
@@ -517,12 +451,9 @@ function updatePurchaseButton() {
   const resEnd  = State.get("reservationEndsAt");
   const prodEnd = State.get("productionEndsAt");
 
-  // Production active (Rule 4: never client-side expire, wait for server)
   if (prodEnd) {
     const diff = Math.ceil((prodEnd - now) / 1000);
-
     if (diff > 0) {
-      // Rule 5: count down numerically until time is up
       const m = Math.floor(diff / 60);
       const s = diff % 60;
       btn.textContent = m > 0
@@ -530,14 +461,12 @@ function updatePurchaseButton() {
         : `Printing — ${diff}s`;
       btn.classList.remove("pulse");
     } else {
-      // Rule 6: "Almost" once past productionEndsAt, until admin clicks Done
       btn.textContent = "Almost done…";
       btn.classList.add("pulse");
     }
     return;
   }
 
-  // Reservation / pending payment
   if (resEnd && now < resEnd) {
     const diff = Math.ceil((resEnd - now) / 1000);
     btn.textContent = `Checkout in progress — ${diff}s`;
@@ -545,13 +474,11 @@ function updatePurchaseButton() {
     return;
   }
 
-  // Neither active — render() handles the default label
   btn.classList.remove("pulse");
   if (!State.checkoutBlocked) {
     btn.textContent = "Purchase";
   }
 }
-
 
 return { render, closeModals, openPreview, openSuccess, openExpired, updatePurchaseButton };
 })();
@@ -561,10 +488,9 @@ return { render, closeModals, openPreview, openSuccess, openExpired, updatePurch
 //  SERVER SYNC
 // ─────────────────────────────────────────
 const Sync = (() => {
-let handle      = null;
-let failCount   = 0;
+let handle    = null;
+let failCount = 0;
 const MAX_FAILS = 3;
-
 
 async function poll() {
   try {
@@ -573,21 +499,16 @@ async function poll() {
     const res        = await fetch(`${CONFIG.api}/reservation-status`, { signal: controller.signal });
     clearTimeout(timeout);
 
-
     if (!res.ok) return;
     failCount = 0;
 
-
     const data = await res.json();
 
-
-    // Slot is free (idle / reservation expired / admin clicked done)
     if (!data.valid || data.status === "edit") {
       State.set({ reservationId: null, reservationEndsAt: null, productionEndsAt: null });
       State.setMode("edit");
       return;
     }
-
 
     if (data.status === "reserved") {
       State.set({
@@ -598,11 +519,9 @@ async function poll() {
       return;
     }
 
-
     if (data.status === "production") {
       State.set({ productionEndsAt: data.productionEndsAt || null, reservationEndsAt: null });
       State.setMode("production");
-      // sync modal countdown if open
       if (DOM.successModal?.classList.contains("active") && data.productionEndsAt) {
         const secs = Math.max(0, Math.ceil((data.productionEndsAt - Date.now()) / 1000));
         if (secs > 0) startCountdown(secs);
@@ -610,14 +529,11 @@ async function poll() {
       return;
     }
 
-
   } catch (err) {
     failCount++;
-    const now         = Date.now();
-    const resExpired  = !State.get("reservationEndsAt") || State.get("reservationEndsAt") < now;
-    // Rule 4: never clear productionEndsAt due to network failure alone
-    const prodPresent = !!State.get("productionEndsAt");
-
+    const now        = Date.now();
+    const resExpired = !State.get("reservationEndsAt") || State.get("reservationEndsAt") < now;
+    const prodPresent= !!State.get("productionEndsAt");
 
     if (resExpired && !prodPresent && failCount >= MAX_FAILS) {
       failCount = 0;
@@ -627,12 +543,10 @@ async function poll() {
   }
 }
 
-
 function start() {
   if (handle) clearInterval(handle);
   handle = setInterval(poll, CONFIG.syncInterval);
 }
-
 
 return { poll, start };
 })();
@@ -644,44 +558,37 @@ return { poll, start };
 const Checkout = (() => {
 async function begin() {
   if (State.get("checkoutInProgress") || State.checkoutBlocked) return;
+  Storage.save();
   const data = Storage.load();
-  if (!data) return;
-
+  if (!data || !data.layout || data.layout.length === 0) return;
 
   State.set({ checkoutInProgress: true });
 
-
   try {
     const resJson = await post("/reserve-slot", { layout: data.layout });
-
 
     if (!resJson.reserved) {
       State.set({ checkoutInProgress: false });
       return;
     }
 
-
     const reservationEndsAt = resJson.expiresAt ?? resJson.endsAt ?? (Date.now() + 60_000);
     State.set({ reservationId: resJson.reservationId, reservationEndsAt, productionEndsAt: null });
     Storage.saveReservation(resJson.reservationId, reservationEndsAt);
-
 
     const checkoutJson = await post("/create-checkout-session", {
       layout:        data.layout,
       reservationId: resJson.reservationId,
     });
 
-
     if (checkoutJson.url) {
       window.location.href = checkoutJson.url;
       return;
     }
 
-
     const savedResId = Storage.loadReservation().id;
     if (savedResId) post("/release-reservation", { reservationId: savedResId }).catch(() => {});
     State.set({ checkoutInProgress: false });
-
 
   } catch (err) {
     const savedResId = Storage.loadReservation().id;
@@ -690,7 +597,6 @@ async function begin() {
   }
 }
 
-
 function releaseOnAbandon() {
   const { id } = Storage.loadReservation();
   if (id) post("/release-reservation", { reservationId: id }).catch(() => {});
@@ -698,17 +604,14 @@ function releaseOnAbandon() {
   State.forceEdit();
 }
 
-
 async function handleStripeReturn() {
   const url       = new URL(window.location.href);
   const sessionId = url.searchParams.get("session_id");
   const canceled  = url.searchParams.get("canceled");
 
-
   url.searchParams.delete("session_id");
   url.searchParams.delete("canceled");
   window.history.replaceState({}, "", url.toString());
-
 
   if (sessionId) {
     for (let i = 0; i < 10; i++) {
@@ -720,30 +623,22 @@ async function handleStripeReturn() {
     return;
   }
 
-
   if (canceled === "true") {
     const { id } = Storage.loadReservation();
-    if (!id) { State.forceEdit(); return; }  // no reservation saved — slot is free, just edit
-
+    if (!id) { State.forceEdit(); return; }
 
     fetch(`${CONFIG.api}/reservation-status`)
       .then(r => r.json())
       .then(data => {
         if (data.valid && data.reservationId === id) {
-          // Slot still ours — release it and clear all state
           post("/release-reservation", { reservationId: id }).catch(() => {});
-          Storage.clearReservation();
-          State.forceEdit();
-        } else {
-          // Slot already gone (expired or taken) — just clear local state
-          Storage.clearReservation();
-          State.forceEdit();
         }
+        Storage.clearReservation();
+        State.forceEdit();
       })
       .catch(() => releaseOnAbandon());
   }
 }
-
 
 return { begin, handleStripeReturn, releaseOnAbandon };
 })();
@@ -759,7 +654,6 @@ reset() {
   UI.closeModals();
   State.forceEdit();
 },
-
 
 placeThumb(i, e) {
   if (State.get("checkoutInProgress")) return;
@@ -777,14 +671,13 @@ placeThumb(i, e) {
 
 
 // ─────────────────────────────────────────
-//  CLOCK  (reservation expiry only — Rule 4: never expire production)
+//  CLOCK
 // ─────────────────────────────────────────
 setInterval(() => {
   const now = Date.now();
   if (State.get("reservationEndsAt") && State.get("reservationEndsAt") < now) {
     State.set({ reservationId: null, reservationEndsAt: null });
   }
-  // Do NOT clear productionEndsAt here — server sync drives that (Rule 4)
 }, 1_000);
 
 
@@ -792,19 +685,18 @@ setInterval(() => {
 //  LISTENERS
 // ─────────────────────────────────────────
 function attachListeners() {
-DOM.previewBtn?.addEventListener("click",         () => UI.openPreview());
-DOM.purchaseBtn?.addEventListener("click",        () => Checkout.begin());
-DOM.resetBtn?.addEventListener("click",           () => Actions.reset());
-DOM.editBtn?.addEventListener("click",            () => UI.closeModals());
-DOM.backToEditBtn?.addEventListener("click",      () => UI.closeModals());
-DOM.notifyBtn?.addEventListener("click",          () => alert("We will notify you."));
-DOM.expiredOkBtn?.addEventListener("click",       () => UI.closeModals());
-DOM.expiredPurchaseBtn?.addEventListener("click", () => { UI.closeModals(); Checkout.begin(); });
+  DOM.previewBtn?.addEventListener("click",         () => UI.openPreview());
+  DOM.purchaseBtn?.addEventListener("click",        () => Checkout.begin());
+  DOM.resetBtn?.addEventListener("click",           () => Actions.reset());
+  DOM.editBtn?.addEventListener("click",            () => UI.closeModals());
+  DOM.backToEditBtn?.addEventListener("click",      () => UI.closeModals());
+  DOM.notifyBtn?.addEventListener("click",          () => alert("We will notify you."));
+  DOM.expiredOkBtn?.addEventListener("click",       () => UI.closeModals());
+  DOM.expiredPurchaseBtn?.addEventListener("click", () => { UI.closeModals(); Checkout.begin(); });
 
-
-DOM.thumbs.forEach((el, i) => {
-  el.addEventListener("pointerdown", e => { e.preventDefault(); Actions.placeThumb(i, e); });
-});
+  DOM.thumbs.forEach((el, i) => {
+    el.addEventListener("pointerdown", e => { e.preventDefault(); Actions.placeThumb(i, e); });
+  });
 }
 
 
@@ -815,12 +707,10 @@ document.addEventListener("DOMContentLoaded", () => {
   UI.closeModals();
   attachListeners();
 
-
   waitForLayout(async () => {
     Canvas.restore();
 
-    // If we have a saved reservation but no session_id in URL,
-    // we returned from Stripe without paying — release the slot immediately
+    // Release any stale reservation from a previous abandoned checkout
     const url = new URL(window.location.href);
     if (!url.searchParams.has("session_id")) {
       const { id } = Storage.loadReservation();
@@ -835,11 +725,7 @@ document.addEventListener("DOMContentLoaded", () => {
     State.set({ bootComplete: true });
     Sync.start();
 
-
-    // ONE TIMER for purchase button label
-    setInterval(() => {
-      UI.updatePurchaseButton();
-    }, 200);
+    setInterval(() => UI.updatePurchaseButton(), 200);
   });
 });
 
@@ -862,18 +748,12 @@ window.addEventListener("pageshow", (e) => {
   if (!e.persisted) return;
   UI.closeModals();
 
-
   const url = new URL(window.location.href);
   if (url.searchParams.has("session_id")) return;
 
-
-  const { id, endsAt } = Storage.loadReservation();
+  const { id } = Storage.loadReservation();
   if (!id) return;
 
-
-  // Whether expired or not — release and return to edit
-  // releaseOnAbandon posts /release-reservation (server ignores if already expired)
-  // then calls forceEdit to clear all client state immediately
   Checkout.releaseOnAbandon();
 });
 
@@ -885,7 +765,6 @@ function clamp(val, min, max) {
   return Math.max(min, Math.min(max, val));
 }
 
-
 function post(path, body) {
   return fetch(CONFIG.api + path, {
     method:  "POST",
@@ -893,7 +772,6 @@ function post(path, body) {
     body:    JSON.stringify(body),
   }).then(r => r.json());
 }
-
 
 function waitForLayout(cb) {
   let lastW = 0, lastH = 0, stable = 0;
@@ -905,21 +783,17 @@ function waitForLayout(cb) {
   })();
 }
 
-
 let countdownInterval;
-
 
 function startCountdown(seconds) {
   clearInterval(countdownInterval);
   let remaining = seconds;
-
 
   countdownInterval = setInterval(() => {
     const m = Math.floor(remaining / 60);
     const s = remaining % 60;
     if (DOM.countdownDisplay)
       DOM.countdownDisplay.textContent = `${m}:${String(s).padStart(2, "0")}`;
-
 
     if (remaining <= 0) {
       clearInterval(countdownInterval);
