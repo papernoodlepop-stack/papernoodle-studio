@@ -345,35 +345,6 @@ function startRotate(box, e) {
   document.addEventListener("pointerup",   onUp);
 }
 
-  const scale0 = parseFloat(box.dataset.scale || 1);
-  const t1 = e.touches[0];
-  const t2 = e.touches[1];
-  const dist0 = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-
-  function onMove(ev) {
-    if (ev.touches.length !== 2) return;
-    ev.preventDefault();
-    const a = ev.touches[0];
-    const b = ev.touches[1];
-    const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
-    const ratio = dist / dist0;
-    // Clamp scale between 0.1 and 5
-    box.dataset.scale = clamp(scale0 * ratio, 0.1, 5);
-    applyTransform(box);
-  }
-
-  function onEnd() {
-    box.removeEventListener("touchmove",  onMove);
-    box.removeEventListener("touchend",   onEnd);
-    box.removeEventListener("touchcancel",onEnd);
-    Storage.save();
-  }
-
-  box.addEventListener("touchmove",   onMove,  { passive: false });
-  box.addEventListener("touchend",    onEnd);
-  box.addEventListener("touchcancel", onEnd);
-}
-
 function checkOutside(box) {
   const cr     = DOM.canvas.getBoundingClientRect();
   const br     = box.getBoundingClientRect();
@@ -588,7 +559,6 @@ const Checkout = (() => {
 async function begin() {
   if (State.get("checkoutInProgress") || State.checkoutBlocked) return;
 
-  // Save current canvas state before proceeding
   Storage.save();
   const data = Storage.load();
   if (!data || !data.layout || data.layout.length === 0) return;
@@ -730,13 +700,13 @@ function attachListeners() {
   });
 
   document.getElementById("infoBtn")?.addEventListener("click", () => {
-  const msg = new SpeechSynthesisUtterance(
-    "Tap a thumbnail to place it. Drag to move. Use the rotate handle to spin. Pinch with two fingers to resize. Drag off the canvas to remove."
-  );
-  msg.rate = 0.9;
-  speechSynthesis.cancel();
-  speechSynthesis.speak(msg);
-});
+    const msg = new SpeechSynthesisUtterance(
+      "Tap a thumbnail to place it. Drag to move. Use the rotate handle to spin. Drag off the canvas to remove."
+    );
+    msg.rate = 0.9;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(msg);
+  });
 }
 
 
@@ -750,7 +720,6 @@ document.addEventListener("DOMContentLoaded", () => {
   waitForLayout(async () => {
     Canvas.restore();
 
-    // Release any stale reservation from a previous abandoned checkout
     const url = new URL(window.location.href);
     if (!url.searchParams.has("session_id")) {
       const { id } = Storage.loadReservation();
