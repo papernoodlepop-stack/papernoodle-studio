@@ -262,6 +262,11 @@ function createBox(x, y, i) {
     }
   });
 
+  // Two-finger pinch to scale
+  box.addEventListener("touchstart", e => {
+    if (e.touches.length === 2) startPinch(box, e);
+  }, { passive: false });
+
   return box;
 }
 
@@ -343,6 +348,40 @@ function startRotate(box, e) {
 
   document.addEventListener("pointermove", onMove);
   document.addEventListener("pointerup",   onUp);
+}
+
+function startPinch(box, e) {
+  // Two-finger pinch to scale
+  if (e.touches.length !== 2) return;
+  e.preventDefault();
+
+  const scale0 = parseFloat(box.dataset.scale || 1);
+  const t1 = e.touches[0];
+  const t2 = e.touches[1];
+  const dist0 = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+
+  function onMove(ev) {
+    if (ev.touches.length !== 2) return;
+    ev.preventDefault();
+    const a = ev.touches[0];
+    const b = ev.touches[1];
+    const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+    const ratio = dist / dist0;
+    // Clamp scale between 0.1 and 5
+    box.dataset.scale = clamp(scale0 * ratio, 0.1, 5);
+    applyTransform(box);
+  }
+
+  function onEnd() {
+    box.removeEventListener("touchmove",  onMove);
+    box.removeEventListener("touchend",   onEnd);
+    box.removeEventListener("touchcancel",onEnd);
+    Storage.save();
+  }
+
+  box.addEventListener("touchmove",   onMove,  { passive: false });
+  box.addEventListener("touchend",    onEnd);
+  box.addEventListener("touchcancel", onEnd);
 }
 
 function checkOutside(box) {
@@ -558,6 +597,8 @@ return { poll, start };
 const Checkout = (() => {
 async function begin() {
   if (State.get("checkoutInProgress") || State.checkoutBlocked) return;
+
+  // Save current canvas state before proceeding
   Storage.save();
   const data = Storage.load();
   if (!data || !data.layout || data.layout.length === 0) return;
