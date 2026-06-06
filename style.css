@@ -157,7 +157,6 @@ button {
   overflow: hidden;
   background: #7a7a7a;
   border: 2px solid #000;
-  touch-action: manipulation;
 }
 
 .canvas-wrap.previewing {
