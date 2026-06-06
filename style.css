@@ -100,6 +100,17 @@ button {
   border-radius: 12px;
 }
 
+#infoBtn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: #aaa;
+  padding: 4px;
+  cursor: pointer;
+  line-height: 1;
+}
+#infoBtn:active { color: #fff; }
+
 /* ===========================
   THUMB GRID
 =========================== */
