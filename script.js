@@ -739,6 +739,10 @@ function attachListeners() {
     el.addEventListener("pointerdown", e => { e.preventDefault(); Actions.placeThumb(i, e); });
   });
 
+  DOM.canvas.addEventListener("touchstart", e => {
+  if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+
   document.getElementById("infoBtn")?.addEventListener("click", () => {
   const msg = new SpeechSynthesisUtterance(
     "Tap a thumbnail to place it. Drag to move. Use the rotate handle to spin. Pinch with two fingers to resize. Drag off the canvas to remove."
