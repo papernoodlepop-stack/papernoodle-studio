@@ -262,11 +262,6 @@ function createBox(x, y, i) {
     }
   });
 
-  // Two-finger pinch to scale
-  box.addEventListener("touchstart", e => {
-    if (e.touches.length === 2) startPinch(box, e);
-  }, { passive: false });
-
   return box;
 }
 
@@ -349,11 +344,6 @@ function startRotate(box, e) {
   document.addEventListener("pointermove", onMove);
   document.addEventListener("pointerup",   onUp);
 }
-
-function startPinch(box, e) {
-  // Two-finger pinch to scale
-  if (e.touches.length !== 2) return;
-  e.preventDefault();
 
   const scale0 = parseFloat(box.dataset.scale || 1);
   const t1 = e.touches[0];
@@ -738,10 +728,6 @@ function attachListeners() {
   DOM.thumbs.forEach((el, i) => {
     el.addEventListener("pointerdown", e => { e.preventDefault(); Actions.placeThumb(i, e); });
   });
-
-  DOM.canvas.addEventListener("touchstart", e => {
-  if (e.touches.length > 1) e.preventDefault();
-}, { passive: false });
 
   document.getElementById("infoBtn")?.addEventListener("click", () => {
   const msg = new SpeechSynthesisUtterance(
