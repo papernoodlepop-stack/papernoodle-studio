@@ -11,7 +11,7 @@ const path    = require("path");
 // ─────────────────────────────────────────
 const CONFIG = {
   port:           3000,
-  frontendUrl:    "https://cyanotype-app-1.onrender.com",
+  frontendUrl:    "https://192.168.0.31:3000/edit.html",
   reservationTTL: 1 * 60 * 1000,   // 1 min
   productionTTL:  30 * 1000,        // 30 sec
 };
@@ -224,7 +224,7 @@ app.post("/create-checkout-session", async (req, res) => {
         price_data: {
           currency:     "usd",
           product_data: { name: "Custom Cyanotype Design" },
-          unit_amount:  1000,
+          unit_amount:  50,
         },
         quantity: 1,
       }],

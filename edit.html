@@ -16,15 +16,14 @@
 <div class="top-ui">
 
  <!-- Start Over ONLY affects canvas + thumbnail sync -->
- <button type="button" class="start-over" id="startOverBtn">
-   Start Over
+ <button type="button" class="start over" id="startOverBtn">
+   StartOver
  </button>
 
  <span class="instructions">
-  Click, move, rotate.<br>
-  Drag outside to remove
+  Long press overlaps<br>
 </span>
-<button type="button" id="infoBtn" title="How to use">ⓘ</button>
+<button type="button" id="infoBtn" title="How to use">📣</button>
 
  <!-- Opens preview modal (read-only snapshot) -->
  <button type="button" id="previewBtn">
@@ -87,7 +86,7 @@ Each thumbnail MUST track:
 <div class="purchase-block">
   <div class="button-row">
     <button id="editBtn">Edit</button>
-    <button id="purchaseBtn">Purchase</button>
+   
   </div>
   <div id="slotCaption" class="slot-caption">
   <span id="slotCaptionText"></span>
@@ -101,7 +100,7 @@ Each thumbnail MUST track:
 <div id="successModal">
   <div class="success-content">
     <h2>Your design is in production</h2>
-    <p>Come back in <span id="countdownDisplay">20:00</span>,or</p>
+    <p>Come back in <span id="countdownDisplay">20:00</span>, or</p>
     <button type="button" id="notifyBtn">Notify Me</button>
     <p>Try a new design?</p>
     <button type="button" id="backToEditBtn">Back to Edit</button>
@@ -120,6 +119,7 @@ Each thumbnail MUST track:
 <!-- ===========================
     SCRIPT ENTRY POINT
 =========================== -->
+</div> <!-- .editor-frame -->
 <script src="script.js"></script>
 
 </body>
