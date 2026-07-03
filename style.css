@@ -83,10 +83,13 @@ button {
 =========================== */
 .top-ui {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 24px;
-  padding: 8px 12px;
+
+  width: min(340px, 88vw); /* same idea as your canvas frame */
+  margin: 0 auto;          /* center it on screen */
+
+  padding: 8px 0;         /* remove side padding so it reaches edges */
   font-size: 14px;
   background: #222;
 }
@@ -106,16 +109,94 @@ button {
   border-radius: 12px;
 }
 
-#infoBtn {
-  background: none;
-  border: none;
-  font-size: 22px;
-  color: #aaa;
-  padding: 4px;
+.info-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255,255,255,0.10);
+  border: 2px solid rgba(255, 255, 255, 0.853);
+
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+
   cursor: pointer;
-  line-height: 1;
 }
-#infoBtn:active { color: #fff; }
+
+
+.help-popup {
+  position: absolute;
+  top: 42px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+
+  background: rgba(20, 20, 20, 0.92);
+  color: white;
+
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+
+  font-size: 13px;
+  line-height: 1.45;
+
+  display: none;
+  z-index: 1000;
+}
+
+.help-popup strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.help-popup p {
+  margin: 10px 0;
+}
+
+
+.help-popup {
+  position: absolute;
+  top: 42px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+
+  background: rgba(20, 20, 20, 0.95);
+  color: #fff;
+
+  padding: 14px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+
+  font-size: 12.5px;
+  line-height: 1.4;
+
+  display: none;
+  z-index: 1000;
+}
+
+.help-title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 10px;
+  opacity: 0.9;
+}
+
+.help-section {
+  margin-bottom: 10px;
+}
+
+.help-bold {
+  font-weight: 600;
+  margin-bottom: 2px;
+  color: #ffffff;
+}
 
 /* ===========================
   THUMB GRID
@@ -125,7 +206,7 @@ button {
   grid-template-columns: repeat(4, 60px);
   grid-template-rows: repeat(2, 60px);
   gap: 15px 30px;
-  margin-top: -16px;
+  margin-top: -12px;
   justify-content: center;
   align-items: center;
 }

@@ -11,7 +11,7 @@ const path    = require("path");
 // ─────────────────────────────────────────
 const CONFIG = {
   port:           3000,
-  frontendUrl:    "https://192.168.0.31:3000/edit.html",
+  frontendUrl:    "https://192.168.0.48:3000/edit.html",
   reservationTTL: 1 * 60 * 1000,   // 1 min
   productionTTL:  30 * 1000,        // 30 sec
 };
