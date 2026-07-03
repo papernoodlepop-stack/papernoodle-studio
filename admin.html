@@ -116,7 +116,16 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────────
-const THUMB_IMAGES = [0,1,2,3,4,5,6,7].map(i => `/thumb/${i}`);
+const THUMB_IMAGES = [
+  "/thumb/cockatoo.png",
+  "/thumb/hummingbird.png",
+  "/thumb/heart.png",
+  "/thumb/branch.png",
+  "/thumb/spiral.png",
+  "/thumb/grass.png",
+  "/thumb/bubble.png",
+  "/thumb/fuchsia.png",
+];
 const CANVAS_W = 180, CANVAS_H = CANVAS_W * 7 / 5;
 const BOX_W = CANVAS_W / 3, BOX_H = BOX_W * 2;
 
@@ -327,13 +336,17 @@ async function saveAsPNG(idx) {
 
 // ── DONE BUTTON ───────────────────────────────────────────────────────────────
 doneBtn.addEventListener("click", async () => {
+  doneBtn.disabled    = true;
+  doneBtn.textContent = "Processing…";
   try {
-    doneBtn.disabled    = true;
-    doneBtn.textContent = "Processing…";
-    await fetch("/admin/done", { method: "POST" });
+    const res = await fetch("/admin/done", { method: "POST" });
+    if (!res.ok) throw new Error(`Server responded ${res.status}`);
+    doneBtn.textContent = "Done ✓";
+  } catch (err) {
+    console.error("[admin/done] failed:", err);
+    doneBtn.textContent = "Failed — tap to retry";
   } finally {
-    doneBtn.disabled    = false;
-    doneBtn.textContent = "Mark Done & Notify";
+    doneBtn.disabled = false;
   }
 });
 
