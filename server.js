@@ -1,20 +1,36 @@
 require("dotenv").config();
 
 const express = require("express");
-const cors    = require("cors");
 const stripe  = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const fs      = require("fs");
 const path    = require("path");
+
+const twilio = require("twilio");
+
+const client = twilio(
+  process.env.TWILIO_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 
 // ─────────────────────────────────────────
 //  CONFIG
 // ─────────────────────────────────────────
 const CONFIG = {
   port:           3000,
-  frontendUrl:    "https://192.168.0.48:3000/edit.html",
+  // Base origin only — page paths (/edit.html etc.) are appended where used.
+  frontendUrl: "https://app.papernoodle.com",
   reservationTTL: 5 * 60 * 1000,   // 5 min
   productionTTL:  15 * 60 * 1000,  // 15 min
 };
+
+// ─────────────────────────────────────────
+//  ADMIN AUTH — fail loudly if not configured, never fall back to a guessable default
+// ─────────────────────────────────────────
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) {
+  console.error("❌ ADMIN_PASSWORD is not set in the environment. Refusing to start with an unprotected admin panel.");
+  process.exit(1);
+}
 
 // ─────────────────────────────────────────
 //  ORDER PERSISTENCE
@@ -48,7 +64,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors({ origin: "*" }));
 // No-cache for HTML/JS — must be BEFORE express.static
 app.use((req, res, next) => {
   if (req.path.endsWith(".js") || req.path.endsWith(".html") || req.path === "/") {
@@ -58,7 +73,7 @@ app.use((req, res, next) => {
 });
 app.use(express.static(__dirname));
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "edit.html")));
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "edit.html")));
+
 app.use((req, res, next) => {
   if (req.path === "/webhook") return next();
   express.json()(req, res, next);
@@ -87,6 +102,7 @@ function slotFree(now = Date.now()) {
 }
 
 function resetSlot(reason) {
+  console.log(`[slot] reset (${reason})`);
   slot.reservationId    = null;
   slot.stripeSessionId  = null;
   slot.layout           = [];
@@ -136,9 +152,50 @@ app.get("/thumb/:name", (req, res) => {
 });
 
 // ─────────────────────────────────────────
+//  ADMIN AUTH MIDDLEWARE
+// ─────────────────────────────────────────
+function adminAuth(req, res, next) {
+  const auth = req.headers["authorization"];
+  if (!auth) {
+    res.setHeader("WWW-Authenticate", 'Basic realm="Admin"');
+    return res.status(401).send("Authentication required");
+  }
+  const [, encoded] = auth.split(" ");
+  const [, password] = Buffer.from(encoded, "base64").toString().split(":");
+  if (password !== ADMIN_PASSWORD) {
+    res.setHeader("WWW-Authenticate", 'Basic realm="Admin"');
+    return res.status(401).send("Wrong password");
+  }
+  next();
+}
+
+// ─────────────────────────────────────────
 //  ROUTES
 // ─────────────────────────────────────────
 app.get("/ping", (req, res) => res.send("ok"));
+
+// Debug-only SMS trigger — gated behind admin auth so it can't be fired by
+// anyone who happens to find the route.
+app.get("/test-sms", adminAuth, async (req, res) => {
+  try {
+    const message = await client.messages.create({
+      body: "TEST SMS",
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: "+16143540440"
+    });
+
+    res.json({
+      ok: true,
+      sid: message.sid
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      ok: false,
+      error: err.message
+    });
+  }
+});
 
 app.get("/reservation-status", (req, res) => {
   const now = Date.now();
@@ -292,32 +349,35 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
       layout:        JSON.parse(session.metadata?.layout || "[]"),
       paidAt:        new Date(now).toISOString(),
     });
+
+    // ─────────────────────────────────────────
+    //  TWILIO SMS NOTIFICATION
+    // ─────────────────────────────────────────
+    const phone = session.customer_details?.phone;
+    console.log("[SMS DEBUG] phone from Stripe:", phone);
+
+    if (phone) {
+      try {
+        await client.messages.create({
+          body: "Your cyanotype design is ready!",
+          from: process.env.TWILIO_PHONE_NUMBER,
+          to: phone
+        });
+        console.log("[SMS SENT] success");
+      } catch (err) {
+        console.error("[SMS FAILED]", err.message);
+      }
+    } else {
+      console.log("[SMS SKIPPED] no phone number from Stripe");
+    }
   }
 
   return res.json({ received: true });
 });
 
 // ─────────────────────────────────────────
-//  ADMIN AUTH
+//  ADMIN ROUTES
 // ─────────────────────────────────────────
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "cyanotype";
-
-function adminAuth(req, res, next) {
-  const auth = req.headers["authorization"];
-  if (!auth) {
-    res.setHeader("WWW-Authenticate", 'Basic realm="Admin"');
-    return res.status(401).send("Authentication required");
-  }
-  const [, encoded] = auth.split(" ");
-  const [, password] = Buffer.from(encoded, "base64").toString().split(":");
-  if (password !== ADMIN_PASSWORD) {
-    res.setHeader("WWW-Authenticate", 'Basic realm="Admin"');
-    return res.status(401).send("Wrong password");
-  }
-  next();
-}
-
-
 app.get("/admin",        (req, res) => res.sendFile(path.join(__dirname, "admin.html")));
 app.get("/admin/orders", adminAuth, (req, res) => res.json(loadOrders()));
 
@@ -364,23 +424,50 @@ app.post("/admin/done", adminAuth, async (req, res) => {
 const QRCode = require("qrcode");
 
 app.get("/qr", async (req, res) => {
-  const url = `${CONFIG.frontendUrl}/edit.html`;
-  const svg = await QRCode.toString(url, { type: "svg", margin: 2, width: 300 });
+  try {
+    const url = `${CONFIG.frontendUrl}/edit.html`;
 
-  res.send(`<!DOCTYPE html>
+    const svg = await QRCode.toString(url, {
+      type: "svg",
+      margin: 2,
+      width: 300
+    });
+
+    const html = `
+<!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>QR Code</title>
 <style>
-  body { background:#fff; display:flex; flex-direction:column; align-items:center;
-         justify-content:center; min-height:100vh; margin:0; font-family:sans-serif; gap:16px; }
-  svg  { width:300px; height:300px; }
-  p    { font-size:13px; color:#666; margin:0; }
+  body {
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+    font-family: sans-serif;
+    gap: 16px;
+  }
+  svg { width: 300px; height: 300px; }
+  p { font-size: 13px; color: #666; margin: 0; }
 </style>
 </head>
-<body>${svg}<p>${url}</p></body>
-</html>`);
+<body>
+  ${svg}
+  <p>${url}</p>
+</body>
+</html>
+`;
+
+    res.send(html);
+
+  } catch (err) {
+    console.error("[QR ERROR]", err);
+    res.status(500).send("QR generation failed");
+  }
 });
 
 // ─────────────────────────────────────────
