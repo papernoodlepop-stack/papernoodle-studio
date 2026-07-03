@@ -1077,6 +1077,7 @@ setInterval(() => {
 function attachListeners() {
  DOM.previewBtn?.addEventListener("click",         () => UI.openPreview());
  DOM.purchaseBtn?.addEventListener("click",        () => Checkout.begin());
+ console.log("purchase clicked");
  DOM.resetBtn?.addEventListener("click",           () => Actions.reset());
  DOM.editBtn?.addEventListener("click",            () => UI.closeModals());
  DOM.backToEditBtn?.addEventListener("click",      () => UI.closeModals());

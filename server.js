@@ -12,8 +12,8 @@ const path    = require("path");
 const CONFIG = {
   port:           3000,
   frontendUrl:    "https://192.168.0.48:3000/edit.html",
-  reservationTTL: 1 * 60 * 1000,   // 1 min
-  productionTTL:  30 * 1000,        // 30 sec
+  reservationTTL: 5 * 60 * 1000,   // 5 min
+  productionTTL:  15 * 60 * 1000,  // 15 min
 };
 
 // ─────────────────────────────────────────
@@ -138,6 +138,8 @@ app.get("/thumb/:name", (req, res) => {
 // ─────────────────────────────────────────
 //  ROUTES
 // ─────────────────────────────────────────
+app.get("/ping", (req, res) => res.send("ok"));
+
 app.get("/reservation-status", (req, res) => {
   const now = Date.now();
   if (slotFree(now)) {
