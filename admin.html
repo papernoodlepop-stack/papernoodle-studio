@@ -260,6 +260,7 @@ function renderOrders(orders) {
         ${order.customerPhone ? `<span>Phone: ${order.customerPhone}</span>` : ""}
       </div>
       <div class="order-amount">$${amount}</div>
+      <div style="color:#888;font-size:12px;">Paid via Stripe</div>
       <div class="design-wrap">
         <div class="design-canvas-container" id="canvas-${idx}"></div>
         <div class="design-actions">
