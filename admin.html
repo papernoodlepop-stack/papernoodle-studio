@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cyanotype Admin</title>
+<title>Papernoodle Admin</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -85,8 +85,8 @@
     border-radius: 4px; overflow: hidden; flex-shrink: 0;
   }
   .design-box {
-    position: absolute; background-size: cover;
-    background-position: center; border: 1px solid #fff;
+    position: absolute; background-size: contain;
+    background-repeat: no-repeat; background-position: center;
   }
   .design-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -99,7 +99,7 @@
 </head>
 <body>
 
-<h1>Cyanotype Admin</h1>
+<h1>Papernoodle Admin</h1>
 <button id="doneBtn" class="btn-done">Mark Done &amp; Notify</button>
 
 <div id="slot-status">
@@ -116,6 +116,8 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────────
+// These must stay in sync with CONFIG.thumbImages / thumbSizes / thumbScale
+// in the editor (script.js) — same order, same index per object type.
 const THUMB_IMAGES = [
   "/thumb/cockatoo.png",
   "/thumb/hummingbird.png",
@@ -126,8 +128,28 @@ const THUMB_IMAGES = [
   "/thumb/bubble.png",
   "/thumb/fuchsia.png",
 ];
+
+const THUMB_SIZES = [
+  { w: 144, h: 110 },
+  { w: 100, h:  81 },
+  { w:  60, h:  67 },
+  { w: 120, h:  89 },
+  { w:  90, h:  79 },
+  { w: 144, h: 118 },
+  { w:  60, h:  57 },
+  { w:  80, h: 132 },
+];
+
+const THUMB_SCALE = [2.8, 2.7, 1.2, 3.2, 2.4, 3.3, 1.2, 2.3];
+
 const CANVAS_W = 180, CANVAS_H = CANVAS_W * 7 / 5;
-const BOX_W = CANVAS_W / 3, BOX_H = BOX_W * 2;
+
+// The editor stores each object's on-screen pixel size (thumbSizes * thumbScale)
+// but that's sized for the editor's own canvas, not this 180px-wide preview.
+// This one constant maps "editor pixels" down to "admin preview pixels" —
+// tune it by eye against a real printed order until proportions look right,
+// then it applies correctly to every design from then on.
+const ADMIN_SCALE = 0.5;
 
 // ── DOM ──────────────────────────────────────────────────────────────────────
 const dot            = document.getElementById("status-dot");
@@ -137,15 +159,10 @@ const countdownLabel = document.getElementById("countdown-label");
 const doneBtn        = document.getElementById("doneBtn");
 
 // ── SSE STATE ─────────────────────────────────────────────────────────────────
-// lastData:        most recent SSE payload
-// anchorWall:      performance.now() when that payload arrived
-// anchorServerNow: server's Date.now() in that payload
-// Together these let the ticker interpolate server time between SSE messages.
 let lastData        = null;
 let anchorWall      = null;
 let anchorServerNow = null;
 
-// ── SSE CONNECTION ────────────────────────────────────────────────────────────
 const STATUS_LABELS = {
   idle:            "Slot open",
   reserved:        "Checkout in progress",
@@ -179,8 +196,6 @@ function connectSSE() {
 connectSSE();
 
 // ── COUNTDOWN TICKER ─────────────────────────────────────────────────────────
-// Runs every 200 ms. Interpolates server time so display ticks smoothly
-// even though SSE only arrives every 1 s.
 setInterval(() => {
   if (!lastData) {
     countdownEl.textContent    = "";
@@ -188,7 +203,6 @@ setInterval(() => {
     return;
   }
 
-  // Estimate current server time
   const elapsed   = anchorWall != null ? performance.now() - anchorWall : 0;
   const serverNow = anchorServerNow != null ? anchorServerNow + elapsed : Date.now();
 
@@ -202,7 +216,6 @@ setInterval(() => {
   }
 
   if (status === "reserved" || status === "pending_payment") {
-    // Reservation countdown — clamp at 0
     const secs = reservationEndsAt
       ? Math.max(0, Math.ceil((reservationEndsAt - serverNow) / 1000))
       : 0;
@@ -213,7 +226,6 @@ setInterval(() => {
   }
 
   if (status === "production") {
-    // Production — go negative (overtime) after expected end, until Done clicked
     const secs = productionEndsAt
       ? Math.ceil((productionEndsAt - serverNow) / 1000)
       : 0;
@@ -284,15 +296,29 @@ function renderOrders(orders) {
 function renderDesign(layout, idx) {
   const container = document.getElementById(`canvas-${idx}`);
   if (!container || !layout) return;
-  layout.forEach(b => {
-    const el             = document.createElement("div");
-    el.className         = "design-box";
-    el.style.left            = (b.left * CANVAS_W) + "px";
-    el.style.top             = (b.top  * CANVAS_H) + "px";
-    el.style.width           = BOX_W + "px";
-    el.style.height          = BOX_H + "px";
-    el.style.transform       = `rotate(${b.rotation || 0}rad)`;
-    el.style.backgroundImage = `url('${THUMB_IMAGES[b.origin]}')`;
+
+  // Draw in stack order (z ascending) so overlap looks right, same as the
+  // editor's own preview — earlier saved orders may not have a z field,
+  // in which case array order is used as a reasonable fallback.
+  const ordered = [...layout].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+
+  ordered.forEach(b => {
+    const itemIdx = Number(b.origin);
+    const size    = THUMB_SIZES[itemIdx];
+    const scale   = THUMB_SCALE[itemIdx] ?? 1;
+    if (!size) return;
+
+    const w = size.w * scale * ADMIN_SCALE;
+    const h = size.h * scale * ADMIN_SCALE;
+
+    const el = document.createElement("div");
+    el.className = "design-box";
+    el.style.left      = (b.left * CANVAS_W) + "px";
+    el.style.top       = (b.top  * CANVAS_H) + "px";
+    el.style.width     = w + "px";
+    el.style.height    = h + "px";
+    el.style.transform = `rotate(${b.rotation || 0}rad)`;
+    el.style.backgroundImage = `url('${THUMB_IMAGES[itemIdx]}')`;
     container.appendChild(el);
   });
 }
@@ -315,7 +341,8 @@ async function saveAsPNG(idx) {
       img.onload = () => {
         const left = parseFloat(box.style.left) * scale;
         const top  = parseFloat(box.style.top)  * scale;
-        const w = BOX_W * scale, h = BOX_H * scale;
+        const w = parseFloat(box.style.width)  * scale;
+        const h = parseFloat(box.style.height) * scale;
         const rot = parseFloat((box.style.transform.match(/rotate\(([^)]+)rad\)/) || [])[1] || 0);
         ctx.save();
         ctx.translate(left + w / 2, top + h / 2);
