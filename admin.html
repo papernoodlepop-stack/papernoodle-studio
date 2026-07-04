@@ -304,12 +304,22 @@ function renderDesign(layout, idx) {
 
   ordered.forEach(b => {
     const itemIdx = Number(b.origin);
-    const size    = THUMB_SIZES[itemIdx];
-    const scale   = THUMB_SCALE[itemIdx] ?? 1;
-    if (!size) return;
+    if (!THUMB_IMAGES[itemIdx]) return;
 
-    const w = size.w * scale * ADMIN_SCALE;
-    const h = size.h * scale * ADMIN_SCALE;
+    let w, h;
+    if (b.width != null && b.height != null) {
+      // New format — exact proportions, device-independent.
+      w = b.width  * CANVAS_W;
+      h = b.height * CANVAS_H;
+    } else {
+      // Old orders saved before width/height were recorded — best-effort
+      // estimate using the fixed ADMIN_SCALE guess.
+      const size  = THUMB_SIZES[itemIdx];
+      const scale = THUMB_SCALE[itemIdx] ?? 1;
+      if (!size) return;
+      w = size.w * scale * ADMIN_SCALE;
+      h = size.h * scale * ADMIN_SCALE;
+    }
 
     const el = document.createElement("div");
     el.className = "design-box";
