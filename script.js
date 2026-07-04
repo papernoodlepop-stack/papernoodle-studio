@@ -135,8 +135,7 @@ const DOM = {
   purchaseBtn:        document.getElementById("purchaseBtn"),
   resetBtn:           document.getElementById("startOverBtn"),
   editBtn:            document.getElementById("editBtn"),
-  backToEditBtn:      document.getElementById("backToEditBtn"),
-  notifyBtn:          document.getElementById("notifyBtn"),
+  keepEditingBtn:     document.getElementById("keepEditingBtn"),
   expiredOkBtn:       document.getElementById("expiredOkBtn"),
   expiredPurchaseBtn: document.getElementById("expiredPurchaseBtn"),
   slotCaption:        document.getElementById("slotCaption"),
@@ -815,7 +814,6 @@ const UI = (() => {
     if (!State.get("bootComplete")) return;
     const boxes = CanvasObjects.hasBoxes();
     const blocked = State.checkoutBlocked;
-    const inProd  = !!State.get("productionEndsAt");
 
     setBtn(DOM.purchaseBtn, !boxes || blocked);
     setBtn(DOM.previewBtn,  !boxes);
@@ -823,10 +821,8 @@ const UI = (() => {
     Thumbs.render();
 
     if (DOM.slotCaption && DOM.slotCaptionText) {
-      const show = blocked && !inProd;
-      DOM.slotCaption.classList.toggle("visible", show);
-      DOM.slotCaptionText.textContent = show
-        ? "Checkout in progress — stick around in case of cancellation" : "";
+      DOM.slotCaption.classList.toggle("visible", blocked);
+      if (!blocked) DOM.slotCaptionText.textContent = "";
     }
   }
 
@@ -928,14 +924,21 @@ const UI = (() => {
       const d = Math.ceil((prodEnd - now) / 1000);
       if (d > 0) {
         const m = Math.floor(d / 60), s = d % 60;
-        btn.textContent = m > 0 ? `Printing — ${m}:${String(s).padStart(2,"0")}` : `Printing — ${d}s`;
+        const timeStr = m > 0 ? `${m}:${String(s).padStart(2,"0")}` : `${d}s`;
+        btn.textContent = `Printing — ${timeStr}`;
         btn.classList.remove("pulse");
-      } else { btn.textContent = "Almost done…"; btn.classList.add("pulse"); }
+        if (DOM.slotCaptionText) DOM.slotCaptionText.textContent = `Next slot available in ${timeStr}`;
+      } else {
+        btn.textContent = "Almost done…"; btn.classList.add("pulse");
+        if (DOM.slotCaptionText) DOM.slotCaptionText.textContent = "Next slot available any moment now";
+      }
       return;
     }
     if (resEnd && now < resEnd) {
       btn.textContent = `Checkout in progress — ${Math.ceil((resEnd - now) / 1000)}s`;
-      btn.classList.remove("pulse"); return;
+      btn.classList.remove("pulse");
+      if (DOM.slotCaptionText) DOM.slotCaptionText.textContent = "Checkout in progress — stick around in case of cancellation";
+      return;
     }
     btn.classList.remove("pulse");
     if (!State.checkoutBlocked) btn.textContent = "Purchase";
@@ -1190,8 +1193,7 @@ function attachListeners() {
   DOM.purchaseBtn?.addEventListener("click",        () => Checkout.begin());
   DOM.resetBtn?.addEventListener("click",           () => Actions.reset());
   DOM.editBtn?.addEventListener("click",            () => UI.closeModals());
-  DOM.backToEditBtn?.addEventListener("click",      () => UI.closeModals());
-  DOM.notifyBtn?.addEventListener("click",          () => alert("We will notify you."));
+  DOM.keepEditingBtn?.addEventListener("click",     () => UI.closeModals());
   DOM.expiredOkBtn?.addEventListener("click",       () => UI.closeModals());
   DOM.expiredPurchaseBtn?.addEventListener("click", () => { UI.closeModals(); Checkout.begin(); });
 
