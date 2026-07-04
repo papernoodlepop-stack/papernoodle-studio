@@ -19,7 +19,7 @@ const CONFIG = {
   port:           3000,
   // Base origin only — page paths (/edit.html etc.) are appended where used.
   frontendUrl:    "https://app.papernoodle.com",
-  reservationTTL: 5 * 60 * 1000,   // 5 min
+  reservationTTL: 15 * 60 * 1000,   // 15 min
   productionTTL:  15 * 60 * 1000,  // 15 min
 };
 
