@@ -1,9 +1,10 @@
 require("dotenv").config();
 
-const express = require("express");
-const stripe  = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const fs      = require("fs");
-const path    = require("path");
+const express  = require("express");
+const stripe   = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const fs       = require("fs");
+const path     = require("path");
+const { MongoClient } = require("mongodb");
 
 const twilio = require("twilio");
 
@@ -18,8 +19,8 @@ const client = twilio(
 const CONFIG = {
   port:           3000,
   // Base origin only — page paths (/edit.html etc.) are appended where used.
-  frontendUrl:    "http://192.168.0.7:3000/",
-  reservationTTL: 15 * 60 * 1000,   // 15 min
+  frontendUrl:    "https://app.papernoodle.com",
+  reservationTTL: 15 * 60 * 1000,  // 15 min
   productionTTL:  15 * 60 * 1000,  // 15 min
 };
 
@@ -33,21 +34,42 @@ if (!ADMIN_PASSWORD) {
 }
 
 // ─────────────────────────────────────────
-//  ORDER PERSISTENCE
+//  MONGODB — real persistence, survives every Render redeploy.
 // ─────────────────────────────────────────
-const ORDERS_FILE = path.join(__dirname, "orders.json");
-
-function loadOrders() {
-  try {
-    if (!fs.existsSync(ORDERS_FILE)) return [];
-    return JSON.parse(fs.readFileSync(ORDERS_FILE, "utf8"));
-  } catch { return []; }
+// Render's free-tier disk is ephemeral: every deploy spins up a brand new
+// container, so anything written to a local file (like the old orders.json)
+// is wiped the moment the next deploy happens. MongoDB Atlas (or any
+// external DB) lives outside that container entirely, so orders persist
+// no matter how many times the app redeploys.
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error("❌ MONGODB_URI is not set in the environment. Refusing to start without persistent order storage.");
+  process.exit(1);
 }
 
-function saveOrder(order) {
-  const orders = loadOrders();
-  orders.unshift(order);
-  fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2));
+let ordersCollection = null;
+
+async function connectMongo() {
+  const mongoClient = new MongoClient(MONGODB_URI);
+  await mongoClient.connect();
+  const db = mongoClient.db("papernoodle");
+  ordersCollection = db.collection("orders");
+  console.log("✅ Connected to MongoDB");
+}
+
+async function loadOrders() {
+  if (!ordersCollection) return [];
+  try {
+    return await ordersCollection.find({}).sort({ paidAt: -1 }).toArray();
+  } catch (err) {
+    console.error("[mongo] loadOrders failed:", err.message);
+    return [];
+  }
+}
+
+async function saveOrder(order) {
+  if (!ordersCollection) throw new Error("Orders collection not ready");
+  await ordersCollection.insertOne(order);
 }
 
 // ─────────────────────────────────────────
@@ -246,7 +268,7 @@ app.post("/reserve-slot", (req, res) => {
   slot.reservationId    = reservationId;
   slot.stripeSessionId  = null;
   // Layout lives here, in server memory, for the lifetime of this reservation.
-  // This is now the ONLY place it's stored pre-payment — never in Stripe metadata.
+  // This is the ONLY place it's stored pre-payment — never in Stripe metadata.
   slot.layout           = req.body.layout || [];
   slot.status           = "reserved";
   slot.expiresAt        = now + CONFIG.reservationTTL;
@@ -292,7 +314,7 @@ app.post("/create-checkout-session", async (req, res) => {
         },
         quantity: 1,
       }],
-      // Only the reservationId goes into metadata now — small, safe, well
+      // Only the reservationId goes into metadata — small, safe, well
       // under Stripe's per-field limit. The actual design (slot.layout)
       // stays in server memory and is looked up by this ID in the webhook.
       metadata:    { reservationId },
@@ -344,23 +366,28 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
     }
 
     // Pull the design from server memory — NOT from Stripe metadata.
-    // This is the fix: large designs no longer get silently truncated.
     const layout = slot.layout;
 
     slot.status           = "production";
     slot.expiresAt        = null;
     slot.productionEndsAt = now + CONFIG.productionTTL;
 
-    saveOrder({
-      id:            reservationId,
-      stripeSession: session.id,
-      amount:        session.amount_total,
-      currency:      session.currency,
-      customerEmail: session.customer_details?.email || null,
-      customerPhone: session.customer_details?.phone || null,
-      layout:        layout,
-      paidAt:        new Date(now).toISOString(),
-    });
+    try {
+      await saveOrder({
+        id:            reservationId,
+        stripeSession: session.id,
+        amount:        session.amount_total,
+        currency:      session.currency,
+        customerEmail: session.customer_details?.email || null,
+        customerPhone: session.customer_details?.phone || null,
+        layout:        layout,
+        paidAt:        new Date(now).toISOString(),
+      });
+    } catch (err) {
+      // Order data is precious — log loudly if the DB write fails so it's
+      // not a silent loss the way the old file-based storage could be.
+      console.error("❌ [order] FAILED TO SAVE ORDER:", err.message, { reservationId, stripeSession: session.id });
+    }
 
     // ─────────────────────────────────────────
     //  TWILIO SMS NOTIFICATION
@@ -391,7 +418,10 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 //  ADMIN ROUTES
 // ─────────────────────────────────────────
 app.get("/admin",        (req, res) => res.sendFile(path.join(__dirname, "admin.html")));
-app.get("/admin/orders", adminAuth, (req, res) => res.json(loadOrders()));
+app.get("/admin/orders", adminAuth, async (req, res) => {
+  const orders = await loadOrders();
+  res.json(orders);
+});
 
 // No auth on SSE — only non-sensitive timing data, EventSource cannot send headers
 app.get("/admin/events", (req, res) => {
@@ -485,6 +515,13 @@ app.get("/qr", async (req, res) => {
 // ─────────────────────────────────────────
 //  START
 // ─────────────────────────────────────────
-app.listen(CONFIG.port, "0.0.0.0", () => {
-  console.log(`🚀 Server running on port ${CONFIG.port}`);
-});
+connectMongo()
+  .then(() => {
+    app.listen(CONFIG.port, "0.0.0.0", () => {
+      console.log(`🚀 Server running on port ${CONFIG.port}`);
+    });
+  })
+  .catch(err => {
+    console.error("❌ Failed to connect to MongoDB, refusing to start:", err.message);
+    process.exit(1);
+  });
