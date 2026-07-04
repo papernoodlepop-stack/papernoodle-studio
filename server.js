@@ -18,7 +18,7 @@ const client = twilio(
 const CONFIG = {
   port:           3000,
   // Base origin only — page paths (/edit.html etc.) are appended where used.
-  frontendUrl: "https://app.papernoodle.com",
+  frontendUrl:    "https://app.papernoodle.com",
   reservationTTL: 5 * 60 * 1000,   // 5 min
   productionTTL:  15 * 60 * 1000,  // 15 min
 };
@@ -82,6 +82,9 @@ app.use((req, res, next) => {
 // ─────────────────────────────────────────
 //  SLOT
 // ─────────────────────────────────────────
+// slot.layout is the SOURCE OF TRUTH for the design — kept here in server
+// memory, never round-tripped through Stripe metadata (which truncates
+// anything over ~500 chars per field and silently corrupts larger designs).
 const slot = {
   reservationId:    null,
   stripeSessionId:  null,
@@ -242,6 +245,8 @@ app.post("/reserve-slot", (req, res) => {
   const reservationId   = `${now}-${Math.floor(Math.random() * 1_000_000)}`;
   slot.reservationId    = reservationId;
   slot.stripeSessionId  = null;
+  // Layout lives here, in server memory, for the lifetime of this reservation.
+  // This is now the ONLY place it's stored pre-payment — never in Stripe metadata.
   slot.layout           = req.body.layout || [];
   slot.status           = "reserved";
   slot.expiresAt        = now + CONFIG.reservationTTL;
@@ -262,7 +267,7 @@ app.post("/release-reservation", (req, res) => {
 });
 
 app.post("/create-checkout-session", async (req, res) => {
-  const { layout, reservationId } = req.body;
+  const { reservationId } = req.body;
   const now = Date.now();
 
   if (slot.reservationId !== reservationId)
@@ -287,7 +292,10 @@ app.post("/create-checkout-session", async (req, res) => {
         },
         quantity: 1,
       }],
-      metadata:    { reservationId, layout: JSON.stringify(layout) },
+      // Only the reservationId goes into metadata now — small, safe, well
+      // under Stripe's per-field limit. The actual design (slot.layout)
+      // stays in server memory and is looked up by this ID in the webhook.
+      metadata:    { reservationId },
       success_url: `${CONFIG.frontendUrl}/edit.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${CONFIG.frontendUrl}/edit.html?canceled=true`,
     });
@@ -335,6 +343,10 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
       return res.json({ received: true });
     }
 
+    // Pull the design from server memory — NOT from Stripe metadata.
+    // This is the fix: large designs no longer get silently truncated.
+    const layout = slot.layout;
+
     slot.status           = "production";
     slot.expiresAt        = null;
     slot.productionEndsAt = now + CONFIG.productionTTL;
@@ -346,7 +358,7 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
       currency:      session.currency,
       customerEmail: session.customer_details?.email || null,
       customerPhone: session.customer_details?.phone || null,
-      layout:        JSON.parse(session.metadata?.layout || "[]"),
+      layout:        layout,
       paidAt:        new Date(now).toISOString(),
     });
 
