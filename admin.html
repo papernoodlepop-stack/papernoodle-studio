@@ -142,6 +142,12 @@ const THUMB_SIZES = [
 
 const THUMB_SCALE = [2.8, 2.7, 1.2, 3.2, 2.4, 3.3, 1.2, 2.3];
 
+// How translucent each material is — same values and index order as
+// CONFIG.thumbOpacity in script.js. This lets overlapping objects compound
+// visually the same way they do in the customer's own preview, instead of
+// every layer rendering fully opaque here.
+const THUMB_OPACITY = [0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6];
+
 const CANVAS_W = 180, CANVAS_H = CANVAS_W * 7 / 5;
 
 // The editor stores each object's on-screen pixel size (thumbSizes * thumbScale)
@@ -170,11 +176,49 @@ const STATUS_LABELS = {
   production:      "In production",
 };
 
+// ── ORDER ALERT SOUND ────────────────────────────────────────────────────────
+// Plays a short, attention-getting tone the moment a real order comes
+// through — useful when you're not staring at the screen during an event.
+let audioCtx = null;
+document.addEventListener("click", () => {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  } else if (audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+}, { once: true });
+
+function playOrderAlert() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioCtx.currentTime;
+    // Three quick ascending beeps — distinct enough to notice, short enough
+    // not to be annoying.
+    [523.25, 659.25, 783.99].forEach((freq, i) => {
+      const osc  = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const start = now + i * 0.15;
+      gain.gain.setValueAtTime(0.001, start);
+      gain.gain.exponentialRampToValueAtTime(0.3, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.25);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(start);
+      osc.stop(start + 0.3);
+    });
+  } catch (err) {
+    console.error("[alert sound] failed:", err);
+  }
+}
+
 function connectSSE() {
   const sse = new EventSource("/admin/events");
 
   sse.onmessage = (e) => {
     const d        = JSON.parse(e.data);
+    const prevStatus = lastData?.status;
     lastData       = d;
     anchorWall     = performance.now();
     anchorServerNow = d.now;
@@ -182,6 +226,14 @@ function connectSSE() {
     dot.className         = d.status;
     statusTxt.textContent = STATUS_LABELS[d.status] || d.status;
     doneBtn.classList.toggle("visible", d.status === "production");
+
+    // Fire the alert and refresh the order list the moment we transition
+    // INTO production — not on every tick while already there, just the
+    // actual moment a new order completes.
+    if (d.status === "production" && prevStatus !== "production") {
+      playOrderAlert();
+      loadOrders();
+    }
   };
 
   sse.onerror = () => {
@@ -329,6 +381,7 @@ function renderDesign(layout, idx) {
     el.style.height    = h + "px";
     el.style.transform = `rotate(${b.rotation || 0}rad)`;
     el.style.backgroundImage = `url('${THUMB_IMAGES[itemIdx]}')`;
+    el.style.opacity   = String(THUMB_OPACITY[itemIdx] ?? 0.6);
     container.appendChild(el);
   });
 }
@@ -354,7 +407,9 @@ async function saveAsPNG(idx) {
         const w = parseFloat(box.style.width)  * scale;
         const h = parseFloat(box.style.height) * scale;
         const rot = parseFloat((box.style.transform.match(/rotate\(([^)]+)rad\)/) || [])[1] || 0);
+        const boxOpacity = parseFloat(box.style.opacity || "1");
         ctx.save();
+        ctx.globalAlpha = boxOpacity;
         ctx.translate(left + w / 2, top + h / 2);
         ctx.rotate(rot);
         ctx.drawImage(img, -w / 2, -h / 2, w, h);
