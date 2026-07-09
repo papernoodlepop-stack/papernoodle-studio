@@ -129,6 +129,11 @@ const THUMB_IMAGES = [
   "/thumb/fuchsia.png",
 ];
 
+const THUMB_NAMES = [
+  "Cockatoo", "Hummingbird", "Heart", "Branch",
+  "Spiral",   "Grass",       "Bubble", "Fuchsia",
+];
+
 const THUMB_SIZES = [
   { w: 144, h: 110 },
   { w: 100, h:  81 },
@@ -325,21 +330,18 @@ function renderOrders(orders) {
     const paid   = new Date(order.paidAt);
     const amount = ((order.amount || 0) / 100).toFixed(2);
     card.innerHTML = `
-      <div class="order-meta">
-        <strong>${paid.toLocaleDateString()} ${paid.toLocaleTimeString()}${idx === 0 ? " — Latest" : ""}</strong>
-        <span>Order: ${order.id}</span>
-        <span>Stripe: ${order.stripeSession}</span>
-        ${order.customerEmail ? `<span>Email: ${order.customerEmail}</span>` : ""}
-        ${order.customerPhone ? `<span>Phone: ${order.customerPhone}</span>` : ""}
-      </div>
-      <div class="order-amount">$${amount}</div>
-      <div style="color:#888;font-size:12px;">Paid via Stripe</div>
-      <div class="design-wrap">
-        <div class="design-canvas-container" id="canvas-${idx}"></div>
-        <div class="design-actions">
-          <button class="btn-save" onclick="saveAsPNG(${idx})">Save as PNG</button>
-        </div>
-      </div>`;
+  <div class="order-meta">
+    ...
+  </div>
+  <div class="order-amount">$${amount}</div>
+  <div style="color:#888;font-size:12px;">Paid via Stripe</div>
+  <div class="design-wrap">
+    <div class="design-canvas-container" id="canvas-${idx}"></div>
+    <div id="layers-${idx}" style="font-size:13px; color:#ccc; line-height:1.6;"></div>
+    <div class="design-actions">
+      <button class="btn-save" onclick="saveAsPNG(${idx})">Save as PNG</button>
+    </div>
+  </div>`;
     list.appendChild(card);
     requestAnimationFrame(() => renderDesign(order.layout, idx));
   });
@@ -384,6 +386,20 @@ function renderDesign(layout, idx) {
     el.style.opacity   = String(THUMB_OPACITY[itemIdx] ?? 0.6);
     container.appendChild(el);
   });
+
+  renderLayerList(layout, idx);
+}
+
+function renderLayerList(layout, idx) {
+  const listEl = document.getElementById(`layers-${idx}`);
+  if (!listEl || !layout?.length) return;
+
+  const topDown = [...layout].sort((a, b) => (b.z ?? 0) - (a.z ?? 0));
+  listEl.innerHTML = topDown.map((b, i) => {
+    const itemIdx = Number(b.origin);
+    const name    = THUMB_NAMES[itemIdx] || `Item ${itemIdx}`;
+    return `<div>${i + 1}. ${name}${i === 0 ? " (top)" : ""}</div>`;
+  }).join("");
 }
 
 async function saveAsPNG(idx) {
