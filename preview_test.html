@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proportion test — no server needed</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0f0f0f;
+    color: #e0e0e0;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+  h1 { font-size: 18px; margin-bottom: 6px; color: #fff; }
+  p.hint { font-size: 13px; color: #888; margin-bottom: 20px; max-width: 480px; }
+  .controls {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px; background: #1a1a1a; padding: 12px 16px; border-radius: 10px;
+    max-width: 400px;
+  }
+  .controls label { font-size: 13px; color: #aaa; }
+  .controls input { flex: 1; }
+  .controls span { font-size: 14px; font-weight: 600; color: #fff; min-width: 40px; text-align: right; }
+
+  .previews { display: flex; gap: 24px; flex-wrap: wrap; }
+  .design-canvas-container {
+    position: relative; width: 180px; aspect-ratio: 5/7;
+    background: #7a7a7a; border: 2px solid #888;
+    border-radius: 4px; flex-shrink: 0;
+  }
+  .design-box {
+    position: absolute; background-size: contain;
+    background-repeat: no-repeat; background-position: center;
+  }
+  .label { font-size: 12px; color: #888; margin-top: 8px; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>Proportion test — no checkout, no server, no Mongo</h1>
+<p class="hint">Drag the slider to tune ADMIN_SCALE until proportions look right against a real printed sample. Whatever value looks correct here is the value to paste into admin.html.</p>
+
+<div class="controls">
+  <label>ADMIN_SCALE</label>
+  <input type="range" id="scaleSlider" min="0.1" max="1.5" step="0.05" value="0.5">
+  <span id="scaleValue">0.50</span>
+</div>
+
+<div class="previews">
+  <div>
+    <div class="design-canvas-container" id="canvas-0"></div>
+    <div class="label">Sample A — 3 overlapping objects</div>
+  </div>
+  <div>
+    <div class="design-canvas-container" id="canvas-1"></div>
+    <div class="label">Sample B — one of each size extreme</div>
+  </div>
+</div>
+
+<script>
+const THUMB_IMAGES = [
+  "/thumb/cockatoo.png",
+  "/thumb/hummingbird.png",
+  "/thumb/heart.png",
+  "/thumb/branch.png",
+  "/thumb/spiral.png",
+  "/thumb/grass.png",
+  "/thumb/bubble.png",
+  "/thumb/fuchsia.png",
+];
+
+const THUMB_SIZES = [
+  { w: 144, h: 110 },
+  { w: 100, h:  81 },
+  { w:  60, h:  67 },
+  { w: 120, h:  89 },
+  { w:  90, h:  79 },
+  { w: 144, h: 118 },
+  { w:  60, h:  57 },
+  { w:  80, h: 132 },
+];
+
+const THUMB_SCALE = [2.8, 2.7, 1.2, 3.2, 2.4, 3.3, 1.2, 2.3];
+
+const CANVAS_W = 180, CANVAS_H = CANVAS_W * 7 / 5;
+
+const SAMPLE_A = [
+  { left: 0.30, top: 0.20, origin: 2, rotation: 0,    z: 10 },
+  { left: 0.45, top: 0.45, origin: 0, rotation: 0.3,  z: 11 },
+  { left: 0.20, top: 0.55, origin: 3, rotation: -0.2, z: 12 },
+];
+
+const SAMPLE_B = [
+  { left: 0.30, top: 0.15, origin: 5, rotation: 0, z: 10 },
+  { left: 0.40, top: 0.55, origin: 2, rotation: 0, z: 11 },
+];
+
+let adminScale = 0.5;
+
+function renderSample(layout, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  const ordered = [...layout].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+  ordered.forEach(b => {
+    const itemIdx = Number(b.origin);
+    const size    = THUMB_SIZES[itemIdx];
+    const scale   = THUMB_SCALE[itemIdx] ?? 1;
+    if (!size) return;
+    const w = size.w * scale * adminScale;
+    const h = size.h * scale * adminScale;
+    const el = document.createElement("div");
+    el.className = "design-box";
+    el.style.left      = (b.left * CANVAS_W) + "px";
+    el.style.top       = (b.top  * CANVAS_H) + "px";
+    el.style.width     = w + "px";
+    el.style.height    = h + "px";
+    el.style.transform = `rotate(${b.rotation || 0}rad)`;
+    el.style.backgroundImage = `url('${THUMB_IMAGES[itemIdx]}')`;
+    container.appendChild(el);
+  });
+}
+
+function renderAll() {
+  renderSample(SAMPLE_A, "canvas-0");
+  renderSample(SAMPLE_B, "canvas-1");
+}
+
+const slider = document.getElementById("scaleSlider");
+const valueLabel = document.getElementById("scaleValue");
+slider.addEventListener("input", () => {
+  adminScale = parseFloat(slider.value);
+  valueLabel.textContent = adminScale.toFixed(2);
+  renderAll();
+});
+
+renderAll();
+</script>
+</body>
+</html>

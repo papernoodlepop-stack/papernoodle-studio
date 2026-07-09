@@ -19,7 +19,7 @@ const client = twilio(
 const CONFIG = {
   port:           3000,
   // Base origin only — page paths (/edit.html etc.) are appended where used.
-  frontendUrl:    "https://app.papernoodle.com",
+  frontendUrl:    "http://192.068.0.7:3000",
   reservationTTL: 15 * 60 * 1000,  // 15 min
   productionTTL:  15 * 60 * 1000,  // 15 min
 };

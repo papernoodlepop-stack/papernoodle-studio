@@ -596,6 +596,7 @@ pickerRotation =
       "background:#2f3542", "color:#fff", "border:1px solid #555",
       "border-radius:8px", "z-index:99998", "min-width:150px",
       "box-shadow:0 4px 14px rgba(0,0,0,0.55)",
+      "transition:transform 0.25s ease", 
     ].join(";");
     document.body.appendChild(picker);
     // Dismiss on outside tap
@@ -947,100 +948,44 @@ const UI = (() => {
   return { render, closeModals, openPreview, openSuccess, openExpired, updatePurchaseButton };
 })();
 
-// ─────────────────────────────────────────
-//  INFO TIP  (sticker-style instructions popup)
-// ─────────────────────────────────────────
-const InfoTip = (() => {
-  const TEXT = "Tap a thumbnail to place it. Tap an image to select it. Drag to move. Use the rotate button to spin freely. Use the up and down buttons to change layer order. Long-press overlapping images to choose a layer.";
+const HelpPopup = (() => {
+  const popup = document.getElementById("helpPopup");
+  if (!popup) return { toggle(){}, hide(){} };
 
-  let tip     = null;
+  document.body.appendChild(popup);
+  popup.style.position = "fixed";
+
   let visible = false;
-  let downAt  = 0;
-
-  const HOLD_THRESHOLD = 250; // ms — press-and-hold longer than this counts as a "hold"
-
-  function ensureTip() {
-    if (tip) return tip;
-    tip = document.createElement("div");
-    tip.id = "info-tip";
-    tip.style.cssText = [
-      "position:fixed",
-      "display:none",
-      "max-width:240px",
-      "padding:12px 16px",
-      "background:rgba(30,32,38,0.82)",
-      "backdrop-filter:blur(6px)",
-      "-webkit-backdrop-filter:blur(6px)",
-      "color:#fff",
-      "font-size:13px",
-      "line-height:1.45",
-      "border-radius:14px",
-      "border:1px solid rgba(255,255,255,0.15)",
-      "z-index:100000",
-      "pointer-events:none",
-      "box-shadow:0 8px 24px rgba(0,0,0,0.35)",
-      "opacity:0",
-      "transform:scale(0.85) translateY(6px)",
-      "transform-origin:bottom center",
-      "transition:opacity .16s ease, transform .16s cubic-bezier(.34,1.56,.64,1)",
-    ].join(";");
-    tip.textContent = TEXT;
-    document.body.appendChild(tip);
-    return tip;
-  }
 
   function position(anchor) {
-    const t = ensureTip();
-    t.style.display = "block";
+    popup.style.display   = "block";
+    popup.style.transform = "none";
     const ar = anchor.getBoundingClientRect();
-    const tw = t.offsetWidth, th = t.offsetHeight;
+    const pw = popup.offsetWidth, ph = popup.offsetHeight;
 
-    let left = ar.left + ar.width / 2 - tw / 2;
-    let top  = ar.top - th - 12;
+    let left = ar.left + ar.width / 2 - pw / 2;
+    let top  = ar.bottom + 10;
 
-    left = clamp(left, 8, window.innerWidth - tw - 8);
-    if (top < 8) top = ar.bottom + 12; // flip below if no room above
+    left = clamp(left, 8, window.innerWidth - pw - 8);
+    if (top + ph > window.innerHeight - 8) top = ar.top - ph - 10;
 
-    t.style.left = `${left}px`;
-    t.style.top  = `${top}px`;
+    popup.style.left = `${left}px`;
+    popup.style.top  = `${top}px`;
   }
 
   function show(anchor) {
     position(anchor);
-    requestAnimationFrame(() => {
-      tip.style.opacity   = "1";
-      tip.style.transform = "scale(1) translateY(0)";
-    });
     visible = true;
+    CanvasObjects.hidePanel();
   }
+  function hide()       { popup.style.display = "none"; visible = false; }
+  function toggle(anchor) { visible ? hide() : show(anchor); }
 
-  function hide() {
-    if (!tip || !visible) return;
-    tip.style.opacity   = "0";
-    tip.style.transform = "scale(0.85) translateY(6px)";
-    visible = false;
-    setTimeout(() => { if (!visible && tip) tip.style.display = "none"; }, 160);
-  }
+  document.addEventListener("pointerdown", e => {
+    if (visible && !e.target.closest("#helpPopup") && !e.target.closest("#infoBtn")) hide();
+  }, true);
 
-  function onAnchorDown(e, anchor) {
-    e.preventDefault();
-    if (visible) { hide(); return; } // second tap while open → close
-    downAt = Date.now();
-    show(anchor);
-  }
-
-  function onAnchorUp() {
-    if (!visible) return;
-    const held = Date.now() - downAt > HOLD_THRESHOLD;
-    if (held) hide(); // press-and-hold → release closes it
-    // quick tap → stays open until tapped again (handled in onAnchorDown)
-  }
-
-  function onOutsidePointerDown(e, anchor) {
-    if (visible && !e.target.closest("#info-tip") && e.target !== anchor) hide();
-  }
-
-  return { onAnchorDown, onAnchorUp, onOutsidePointerDown };
+  return { toggle, hide };
 })();
 
 // ─────────────────────────────────────────
@@ -1202,10 +1147,12 @@ function attachListeners() {
   );
 
   if (DOM.infoBtn) {
-    DOM.infoBtn.addEventListener("pointerdown", e => InfoTip.onAnchorDown(e, DOM.infoBtn));
-    DOM.infoBtn.addEventListener("pointerup",   () => InfoTip.onAnchorUp());
-    document.addEventListener("pointerdown", e => InfoTip.onOutsidePointerDown(e, DOM.infoBtn));
-  }
+  DOM.infoBtn.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    HelpPopup.toggle(DOM.infoBtn);
+  });
+}
 }
 
 // ─────────────────────────────────────────
