@@ -54,6 +54,19 @@
     gap: 1.5rem;
   }
 
+  .category-section {
+    margin-bottom: 3.5rem;
+  }
+  .category-heading {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 400;
+    font-size: 1.4rem;
+    margin: 0 0 1.25rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
+  }
+
   .tile {
     position: relative;
     background: var(--surface);
@@ -201,7 +214,7 @@
 </header>
 
 <main>
-  <div class="grid" id="gallery"></div>
+  <div id="gallery"></div>
 </main>
 
 <div class="lightbox" id="lightbox">
@@ -214,37 +227,41 @@
   /*
     ---- HOW TO ADD YOUR WORK ----
     Edit the `works` array below. Each entry needs:
+      category: the section heading this piece belongs under
       type: "image", "video", or "youtube"
       thumb: path to the small grid thumbnail (always an image, even for video — use a poster frame)
-      src: path to the full-resolution image, the video file, OR the YouTube/Vimeo video ID (for youtube type)
+      src: path to the full-resolution image, the video file, OR the YouTube video ID (for youtube type)
       title: caption shown on hover and in the lightbox
       poster: (video only, optional) a poster image shown before playback starts
 
     For type: "youtube" — src is just the video ID (the part after "v=" in a
-    YouTube URL, e.g. "dQw4w9WgXcQ" from youtube.com/watch?v=dQw4w9WgXcQ).
-    A good thumb for these is the YouTube-hosted thumbnail:
-      https://img.youtube.com/vi/VIDEO_ID/hqdefault.jpg
+    YouTube URL, e.g. "dQw4w9WgXcQ" from youtube.com/watch?v=dQw4w9WgXcQ — strip
+    off any extra params like "&t=15s").
+    A good thumb for these is: https://img.youtube.com/vi/VIDEO_ID/hqdefault.jpg
 
-    Paths can be relative (e.g. "images/relief-01-thumb.jpg") if you upload the
-    files alongside this page, or absolute URLs if hosted elsewhere (e.g. a CDN).
+    Items are grouped into sections by `category`, in the order each category
+    first appears below.
   */
   const works = [
-    { type: "image", thumb: "images/relief-01.jpg", src: "images/relief-01.jpg", title: "Untitled relief, no. 1" },
-    { type: "image", thumb: "images/relief-02.jpg", src: "images/relief-02.jpg", title: "Untitled relief, no. 2" },
-    { type: "image", thumb: "images/relief-03.jpg", src: "images/relief-03.jpg", title: "Untitled relief, no. 3" },
-    { type: "image", thumb: "images/relief-04.jpg", src: "images/relief-04.jpg", title: "Untitled relief, no. 4" },
-    { type: "image", thumb: "images/relief-05.jpg", src: "images/relief-05.jpg", title: "Untitled relief, no. 5" },
-    { type: "image", thumb: "images/popup-01.jpg", src: "images/popup-01.jpg", title: "Untitled, popup-01" },
-    { type: "image", thumb: "images/popup-02.jpg", src: "images/popup-02.jpg", title: "Untitled, popup-02" },
-    { type: "image", thumb: "images/popup-03.jpg", src: "images/popup-03.jpg", title: "Untitled, popup-03" },
-    { type: "image", thumb: "images/popup-04.jpg", src: "images/popup-04.jpg", title: "Untitled, popup-04" },
-    { type: "image", thumb: "images/popup-05.jpg", src: "images/popup-05.jpg", title: "Untitled, popup-05" },
-    { type: "image", thumb: "images/sculpt-01.jpg", src: "images/sculpt-01.jpg", title: "Untitled sculpture, no. 1" },
-    { type: "image", thumb: "images/sculpt-02.jpg", src: "images/sculpt-02.jpg", title: "Untitled sculpture, no. 2" },
-    { type: "image", thumb: "images/sculpt-03.jpg", src: "images/sculpt-03.jpg", title: "Untitled sculpture, no. 3" },
-    { type: "video", thumb: "images/blender-01.mp4", src: "videos/blender-01.mp4", title: "Blender study, no. 1" },
-    { type: "video", thumb: "images/blender-02.mp4", src: "videos/blender-02.mp4", title: "Blender study, no. 2" },
-    { type: "youtube", thumb: "https://img.youtube.com/vi/u_VxwjE8hRo&t=15s/hqdefault.jpg", src: "u_VxwjE8hRo&t=15s", title: "Broad & High" },
+    { category: "Paper sculptures", type: "image", thumb: "images/relief-01.jpg", src: "images/relief-01.jpg", title: "Untitled relief, no. 1" },
+    { category: "Paper sculptures", type: "image", thumb: "images/relief-02.jpg", src: "images/relief-02.jpg", title: "Untitled relief, no. 2" },
+    { category: "Paper sculptures", type: "image", thumb: "images/relief-03.jpg", src: "images/relief-03.jpg", title: "Untitled relief, no. 3" },
+    { category: "Paper sculptures", type: "image", thumb: "images/relief-04.jpg", src: "images/relief-04.jpg", title: "Untitled relief, no. 4" },
+    { category: "Paper sculptures", type: "image", thumb: "images/relief-05.jpg", src: "images/relief-05.jpg", title: "Untitled relief, no. 5" },
+    { category: "Paper sculptures", type: "image", thumb: "images/sculpt-01.jpg", src: "images/sculpt-01.jpg", title: "Untitled sculpture, no. 1" },
+    { category: "Paper sculptures", type: "image", thumb: "images/sculpt-02.jpg", src: "images/sculpt-02.jpg", title: "Untitled sculpture, no. 2" },
+    { category: "Paper sculptures", type: "image", thumb: "images/sculpt-03.jpg", src: "images/sculpt-03.jpg", title: "Untitled sculpture, no. 3" },
+
+    { category: "Pop-ups", type: "image", thumb: "images/popup-01.jpg", src: "images/popup-01.jpg", title: "Untitled, popup-01" },
+    { category: "Pop-ups", type: "image", thumb: "images/popup-02.jpg", src: "images/popup-02.jpg", title: "Untitled, popup-02" },
+    { category: "Pop-ups", type: "image", thumb: "images/popup-03.jpg", src: "images/popup-03.jpg", title: "Untitled, popup-03" },
+    { category: "Pop-ups", type: "image", thumb: "images/popup-04.jpg", src: "images/popup-04.jpg", title: "Untitled, popup-04" },
+    { category: "Pop-ups", type: "image", thumb: "images/popup-05.jpg", src: "images/popup-05.jpg", title: "Untitled, popup-05" },
+
+    { category: "Blender 3D animations", type: "video", thumb: "images/sculpt-01.jpg", src: "videos/blender-01.mp4", title: "Blender study, no. 1" },
+    { category: "Blender 3D animations", type: "video", thumb: "images/sculpt-02.jpg", src: "videos/blender-02.mp4", title: "Blender study, no. 2" },
+
+    { category: "Broad & High", type: "youtube", thumb: "https://img.youtube.com/vi/u_VxwjE8hRo/hqdefault.jpg", src: "u_VxwjE8hRo", title: "Broad & High" },
   ];
 
   const gallery = document.getElementById("gallery");
@@ -260,6 +277,17 @@
   }
 
   works.forEach((work, i) => {
+    // find or create the section for this work's category
+    let section = gallery.querySelector(`section[data-category="${CSS.escape(work.category)}"]`);
+    if (!section) {
+      section = document.createElement("section");
+      section.className = "category-section";
+      section.dataset.category = work.category;
+      section.innerHTML = `<h2 class="category-heading">${work.category}</h2><div class="grid"></div>`;
+      gallery.appendChild(section);
+    }
+    const grid = section.querySelector(".grid");
+
     const tile = document.createElement("div");
     tile.className = "tile";
     tile.tabIndex = 0;
@@ -274,7 +302,7 @@
     tile.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openLightbox(i); }
     });
-    gallery.appendChild(tile);
+    grid.appendChild(tile);
   });
 
   function renderLightboxItem(index) {
