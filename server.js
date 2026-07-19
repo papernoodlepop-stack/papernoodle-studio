@@ -19,8 +19,8 @@ const client = twilio(
 const CONFIG = {
   port:           3000,
   // Base origin only — page paths (/edit.html etc.) are appended where used.
-  frontendUrl:    "http://192.068.0.7:3000",
-  reservationTTL: 15 * 60 * 1000,  // 15 min
+  frontendUrl:    "http://192.168.0.7:3000",
+  reservationTTL: 10 * 60 * 1000,  // 10 min
   productionTTL:  15 * 60 * 1000,  // 15 min
 };
 
@@ -224,6 +224,11 @@ app.get("/test-sms", adminAuth, async (req, res) => {
 
 app.get("/reservation-status", (req, res) => {
   const now = Date.now();
+
+  if (slot.status === "done") {
+    return res.json({ valid: true, status: "done", reservationId: slot.reservationId });
+  }
+  
   if (slotFree(now)) {
     return res.json({ valid: false });
   }
@@ -455,9 +460,9 @@ app.post("/admin/notify", adminAuth, async (req, res) => {
 });
 
 app.post("/admin/done", adminAuth, async (req, res) => {
-  // Only way to free a production slot
-  resetSlot("admin-done");
+  slot.status = "done";
   res.json({ ok: true });
+  setTimeout(() => resetSlot("admin-done"), 5_000);
 });
 
 // ─────────────────────────────────────────

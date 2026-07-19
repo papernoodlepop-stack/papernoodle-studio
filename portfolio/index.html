@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio — Paper Noodle</title>
+<style>
+  :root {
+    --bg: #121210;
+    --surface: #1a1a17;
+    --border: rgba(255,255,255,0.08);
+    --text-primary: #ece9e2;
+    --text-secondary: #9a9a90;
+    --text-muted: #6b6a62;
+    --accent: #c98a52;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  header.site-header {
+    padding: 3.5rem 2rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  header.site-header h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 400;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    margin: 0 0 0.4rem;
+    letter-spacing: 0.01em;
+  }
+  header.site-header p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem 2rem 4rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .tile {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    aspect-ratio: 4 / 5;
+    transition: transform 0.25s ease, border-color 0.25s ease;
+  }
+  .tile:hover, .tile:focus-visible {
+    transform: translateY(-4px);
+    border-color: rgba(255,255,255,0.2);
+  }
+  .tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .tile img, .tile video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .tile .video-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(18,18,16,0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .tile .video-badge svg { width: 12px; height: 12px; fill: #ece9e2; }
+
+  .tile .caption {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 0.7rem 0.9rem;
+    background: linear-gradient(to top, rgba(0,0,0,0.65), transparent);
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    color: #f2f0ea;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .tile:hover .caption, .tile:focus-visible .caption {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Lightbox */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(8,8,7,0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease;
+    padding: 2rem;
+  }
+  .lightbox.open {
+    opacity: 1;
+    visibility: visible;
+  }
+  .lightbox-content {
+    position: relative;
+    max-width: 90vw;
+    max-height: 88vh;
+    transform: scale(0.94);
+    transition: transform 0.3s ease;
+  }
+  .lightbox.open .lightbox-content {
+    transform: scale(1);
+  }
+  .lightbox-content img,
+  .lightbox-content video {
+    max-width: 90vw;
+    max-height: 88vh;
+    display: block;
+    border-radius: 4px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  .lightbox-caption {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-top: 0.9rem;
+    letter-spacing: 0.03em;
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: -44px;
+    right: -6px;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 6px 10px;
+  }
+  .lightbox-close:hover { color: var(--accent); }
+
+  .lightbox-nav {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 2.2rem;
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    opacity: 0.65;
+    transition: opacity 0.2s ease;
+  }
+  .lightbox-nav:hover { opacity: 1; }
+  .lightbox-nav.prev { left: 0.5rem; }
+  .lightbox-nav.next { right: 0.5rem; }
+
+  @media (max-width: 600px) {
+    header.site-header { padding: 2rem 1.2rem 1.5rem; }
+    main { padding: 0.5rem 1.2rem 3rem; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; }
+    .lightbox-nav { font-size: 1.6rem; padding: 0.4rem 0.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1>Portfolio</h1>
+  <p>Paper relief sculpture &amp; dimensional animation</p>
+</header>
+
+<main>
+  <div class="grid" id="gallery"></div>
+</main>
+
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-content" id="lightbox-content"></div>
+  <button class="lightbox-nav prev" id="prev-btn" aria-label="Previous">&#8249;</button>
+  <button class="lightbox-nav next" id="next-btn" aria-label="Next">&#8250;</button>
+</div>
+
+<script>
+  /*
+    ---- HOW TO ADD YOUR WORK ----
+    Edit the `works` array below. Each entry needs:
+      type: "image", "video", or "youtube"
+      thumb: path to the small grid thumbnail (always an image, even for video — use a poster frame)
+      src: path to the full-resolution image, the video file, OR the YouTube/Vimeo video ID (for youtube type)
+      title: caption shown on hover and in the lightbox
+      poster: (video only, optional) a poster image shown before playback starts
+
+    For type: "youtube" — src is just the video ID (the part after "v=" in a
+    YouTube URL, e.g. "dQw4w9WgXcQ" from youtube.com/watch?v=dQw4w9WgXcQ).
+    A good thumb for these is the YouTube-hosted thumbnail:
+      https://img.youtube.com/vi/VIDEO_ID/hqdefault.jpg
+
+    Paths can be relative (e.g. "images/relief-01-thumb.jpg") if you upload the
+    files alongside this page, or absolute URLs if hosted elsewhere (e.g. a CDN).
+  */
+  const works = [
+    { type: "image", thumb: "images/relief-01-thumb.jpg", src: "images/relief-01-full.jpg", title: "Untitled relief, no. 1" },
+    { type: "image", thumb: "images/relief-02-thumb.jpg", src: "images/relief-02-full.jpg", title: "Untitled relief, no. 2" },
+    { type: "image", thumb: "images/relief-03-thumb.jpg", src: "images/relief-03-full.jpg", title: "Untitled relief, no. 3" },
+    { type: "image", thumb: "images/relief-04-thumb.jpg", src: "images/relief-04-full.jpg", title: "Untitled relief, no. 4" },
+    { type: "image", thumb: "images/relief-05-thumb.jpg", src: "images/relief-05-full.jpg", title: "Untitled relief, no. 5" },
+    { type: "image", thumb: "images/sculpt-01-thumb.jpg", src: "images/sculpt-01-full.jpg", title: "Untitled sculpt, no. 1" },
+    { type: "image", thumb: "images/sculpt-02-thumb.jpg", src: "images/sculpt-02-full.jpg", title: "Untitled sculpt, no. 2" },
+    { type: "image", thumb: "images/sculpt-03-thumb.jpg", src: "images/sculpt-03-full.jpg", title: "Untitled sculpt, no. 3" },
+    { type: "image", thumb: "images/popup-01-thumb.jpg", src: "images/popup-01-full.jpg", title: "Untitled popup, no. 1" },
+    { type: "image", thumb: "images/popup-02-thumb.jpg", src: "images/popup-02-full.jpg", title: "Untitled popup, no. 2" },
+    { type: "image", thumb: "images/popup-03-thumb.jpg", src: "images/popup-03-full.jpg", title: "Untitled popup, no. 3" },
+    { type: "image", thumb: "images/popup-04-thumb.jpg", src: "images/popup-04-full.jpg", title: "Untitled popup, no. 4" },
+    { type: "image", thumb: "images/popup-05-thumb.jpg", src: "images/popup-05-full.jpg", title: "Untitled popup, no. 5" },
+    { type: "video", thumb: "images/blender-01-thumb.jpg", src: "videos/blender-01.mp4", poster: "images/blender-01-thumb.jpg", title: "Blender study, no. 1" },
+    { type: "video", thumb: "images/blender-02-thumb.jpg", src: "videos/blender-02.mp4", poster: "images/blender-02-thumb.jpg", title: "Blender study, no. 2" },
+    { type: "youtube", thumb: "https://img.youtube.com/vi/u_VxwjE8hRo/hqdefault.jpg", src: "VIDEO_ID", title: "Blender study, no. 2" },
+    
+  ];
+
+  const gallery = document.getElementById("gallery");
+  const lightbox = document.getElementById("lightbox");
+  const lightboxContent = document.getElementById("lightbox-content");
+  const prevBtn = document.getElementById("prev-btn");
+  const nextBtn = document.getElementById("next-btn");
+
+  let currentIndex = 0;
+
+  function videoIcon() {
+    return `<span class="video-badge"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>`;
+  }
+
+  works.forEach((work, i) => {
+    const tile = document.createElement("div");
+    tile.className = "tile";
+    tile.tabIndex = 0;
+    tile.setAttribute("role", "button");
+    tile.setAttribute("aria-label", `View ${work.title}`);
+    tile.innerHTML = `
+      <img src="${work.thumb}" alt="${work.title}" loading="lazy">
+      ${(work.type === "video" || work.type === "youtube") ? videoIcon() : ""}
+      <div class="caption">${work.title}</div>
+    `;
+    tile.addEventListener("click", () => openLightbox(i));
+    tile.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openLightbox(i); }
+    });
+    gallery.appendChild(tile);
+  });
+
+  function renderLightboxItem(index) {
+    const work = works[index];
+    lightboxContent.innerHTML = "";
+
+    let mediaEl;
+    if (work.type === "youtube") {
+      mediaEl = document.createElement("iframe");
+      mediaEl.src = `https://www.youtube.com/embed/${work.src}?autoplay=1&rel=0&modestbranding=1`;
+      mediaEl.title = work.title;
+      mediaEl.frameBorder = "0";
+      mediaEl.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+      mediaEl.allowFullscreen = true;
+      mediaEl.style.width = "min(90vw, 960px)";
+      mediaEl.style.height = "min(88vh, 540px)";
+      mediaEl.style.border = "none";
+      mediaEl.style.borderRadius = "4px";
+    } else if (work.type === "video") {
+      mediaEl = document.createElement("video");
+      mediaEl.src = work.src;
+      if (work.poster) mediaEl.poster = work.poster;
+      mediaEl.controls = true;
+      mediaEl.autoplay = true;
+      mediaEl.playsInline = true;
+      mediaEl.preload = "metadata";
+    } else {
+      mediaEl = document.createElement("img");
+      mediaEl.src = work.src;
+      mediaEl.alt = work.title;
+    }
+
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "lightbox-close";
+    closeBtn.setAttribute("aria-label", "Close");
+    closeBtn.innerHTML = "&times;";
+    closeBtn.addEventListener("click", closeLightbox);
+
+    const caption = document.createElement("div");
+    caption.className = "lightbox-caption";
+    caption.textContent = work.title;
+
+    lightboxContent.appendChild(closeBtn);
+    lightboxContent.appendChild(mediaEl);
+    lightboxContent.appendChild(caption);
+  }
+
+  function openLightbox(index) {
+    currentIndex = index;
+    renderLightboxItem(currentIndex);
+    lightbox.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function stopActiveMedia() {
+    // native video: pause it. youtube iframe: remove it (no direct pause API
+    // without the full YouTube JS SDK, so clearing the iframe stops playback).
+    const video = lightboxContent.querySelector("video");
+    if (video) video.pause();
+    const iframe = lightboxContent.querySelector("iframe");
+    if (iframe) iframe.remove();
+  }
+
+  function closeLightbox() {
+    stopActiveMedia();
+    lightbox.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  function showNext(offset) {
+    stopActiveMedia();
+    currentIndex = (currentIndex + offset + works.length) % works.length;
+    renderLightboxItem(currentIndex);
+  }
+
+  prevBtn.addEventListener("click", () => showNext(-1));
+  nextBtn.addEventListener("click", () => showNext(1));
+
+  lightbox.addEventListener("click", (e) => {
+    if (e.target === lightbox) closeLightbox();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (!lightbox.classList.contains("open")) return;
+    if (e.key === "Escape") closeLightbox();
+    if (e.key === "ArrowLeft") showNext(-1);
+    if (e.key === "ArrowRight") showNext(1);
+  });
+</script>
+
+</body>
+</html>

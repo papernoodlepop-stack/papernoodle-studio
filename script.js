@@ -989,6 +989,51 @@ const HelpPopup = (() => {
 })();
 
 // ─────────────────────────────────────────
+//  READY BANNER  (persists across page state, independent of modals)
+// ─────────────────────────────────────────
+const ReadyBanner = (() => {
+  const banner = document.getElementById("readyBanner");
+  const dismissBtn = document.getElementById("dismissBannerBtn");
+  if (!banner) return { show(){}, hide(){} };
+
+  let audioCtx = null;
+
+  function playDing() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
+      const osc  = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 880; // a clean, simple "ding" pitch
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.exponentialRampToValueAtTime(0.35, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.6);
+    } catch (err) {
+      console.error("[ready banner] ding failed:", err);
+    }
+  }
+
+  function show() {
+    if (banner.style.display === "flex") return; // already showing, don't re-ding
+    banner.style.display = "flex";
+    playDing();
+  }
+
+  function hide() {
+    banner.style.display = "none";
+  }
+
+  dismissBtn?.addEventListener("click", hide);
+
+  return { show, hide };
+})();
+
+// ─────────────────────────────────────────
 //  SYNC
 // ─────────────────────────────────────────
 const Sync = (() => {
@@ -1004,6 +1049,11 @@ const Sync = (() => {
       if (!res.ok) return;
       fails = 0;
       const d = await res.json();
+
+      if (d.status === "done") {        
+        ReadyBanner.show();
+        return;
+      }
 
       if (!d.valid || d.status === "edit") {
         State.set({ reservationId:null, reservationEndsAt:null, productionEndsAt:null });

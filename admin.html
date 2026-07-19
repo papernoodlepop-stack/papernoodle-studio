@@ -134,6 +134,8 @@ const THUMB_NAMES = [
   "Spiral",   "Grass",       "Bubble", "Fuchsia",
 ];
 
+const THUMB_LIMITS = [1, 1, 5, 1, 3, 1, 5, 2]; 
+
 const THUMB_SIZES = [
   { w: 144, h: 110 },
   { w: 100, h:  81 },
@@ -339,7 +341,7 @@ function renderOrders(orders) {
     <div class="design-canvas-container" id="canvas-${idx}"></div>
     <div id="layers-${idx}" style="font-size:13px; color:#ccc; line-height:1.6;"></div>
     <div class="design-actions">
-      <button class="btn-save" onclick="saveAsPNG(${idx})">Save as PNG</button>
+      <button class="btn-save" onclick='saveAsPNG(${idx}, ${JSON.stringify(order.layout)})'>Save as PNG</button>
     </div>
   </div>`;
     list.appendChild(card);
@@ -351,9 +353,6 @@ function renderDesign(layout, idx) {
   const container = document.getElementById(`canvas-${idx}`);
   if (!container || !layout) return;
 
-  // Draw in stack order (z ascending) so overlap looks right, same as the
-  // editor's own preview — earlier saved orders may not have a z field,
-  // in which case array order is used as a reasonable fallback.
   const ordered = [...layout].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
 
   ordered.forEach(b => {
@@ -362,12 +361,9 @@ function renderDesign(layout, idx) {
 
     let w, h;
     if (b.width != null && b.height != null) {
-      // New format — exact proportions, device-independent.
       w = b.width  * CANVAS_W;
       h = b.height * CANVAS_H;
     } else {
-      // Old orders saved before width/height were recorded — best-effort
-      // estimate using the fixed ADMIN_SCALE guess.
       const size  = THUMB_SIZES[itemIdx];
       const scale = THUMB_SCALE[itemIdx] ?? 1;
       if (!size) return;
@@ -390,30 +386,68 @@ function renderDesign(layout, idx) {
   renderLayerList(layout, idx);
 }
 
+// Text layer list, top → bottom, with instance numbers (e.g. "Bubble #3")
+// for item types that allow more than one on the canvas.
 function renderLayerList(layout, idx) {
   const listEl = document.getElementById(`layers-${idx}`);
   if (!listEl || !layout?.length) return;
 
-  const topDown = [...layout].sort((a, b) => (b.z ?? 0) - (a.z ?? 0));
+  // Instance number isn't stored directly in layout — derive it the same
+  // way the editor does: count occurrences of each origin, in the order
+  // objects were originally placed (array order = placement order).
+  const seqCounters = {};
+  const withSeq = layout.map(b => {
+    const itemIdx = Number(b.origin);
+    seqCounters[itemIdx] = (seqCounters[itemIdx] || 0) + 1;
+    return { ...b, _seq: seqCounters[itemIdx] };
+  });
+
+  const topDown = [...withSeq].sort((a, b) => (b.z ?? 0) - (a.z ?? 0));
+
   listEl.innerHTML = topDown.map((b, i) => {
     const itemIdx = Number(b.origin);
     const name    = THUMB_NAMES[itemIdx] || `Item ${itemIdx}`;
-    return `<div>${i + 1}. ${name}${i === 0 ? " (top)" : ""}</div>`;
+    const limit   = THUMB_LIMITS[itemIdx] || 1;
+    const label   = limit > 1 ? `${name} #${b._seq}` : name;
+    return `<div>${i + 1}. ${label}${i === 0 ? " (top)" : ""}</div>`;
   }).join("");
 }
 
-async function saveAsPNG(idx) {
+async function saveAsPNG(idx, layout) {
   const container = document.getElementById(`canvas-${idx}`);
   if (!container) return;
   const scale = 4;
-  const oc    = document.createElement("canvas");
-  oc.width    = CANVAS_W * scale;
-  oc.height   = CANVAS_H * scale;
-  const ctx   = oc.getContext("2d");
+
+  const seqCounters = {};
+  const withSeq = layout.map(b => {
+    const itemIdx = Number(b.origin);
+    seqCounters[itemIdx] = (seqCounters[itemIdx] || 0) + 1;
+    return { ...b, _seq: seqCounters[itemIdx] };
+  });
+  const topDown = [...withSeq].sort((a, b) => (b.z ?? 0) - (a.z ?? 0));
+  const lines = topDown.map((b, i) => {
+    const itemIdx = Number(b.origin);
+    const name    = THUMB_NAMES[itemIdx] || `Item ${itemIdx}`;
+    const limit   = THUMB_LIMITS[itemIdx] || 1;
+    const label   = limit > 1 ? `${name} #${b._seq}` : name;
+    return `${i + 1}. ${label}${i === 0 ? " (top)" : ""}`;
+  });
+
+  const textLineHeight = 26;
+  const textPadding     = 16;
+  const textAreaHeight  = textPadding * 2 + lines.length * textLineHeight;
+
+  const oc  = document.createElement("canvas");
+  oc.width  = CANVAS_W * scale;                         // ← design width, unchanged
+  oc.height = (CANVAS_H + textAreaHeight) * scale;       // ← design height + extra space
+  const ctx = oc.getContext("2d");
+
+  // Design area — exact same size/shape as always (CANVAS_W × CANVAS_H)
   ctx.fillStyle   = "#7a7a7a";
-  ctx.fillRect(0, 0, oc.width, oc.height);
+  ctx.fillRect(0, 0, CANVAS_W * scale, CANVAS_H * scale);
   ctx.strokeStyle = "#000"; ctx.lineWidth = 2;
-  ctx.strokeRect(1, 1, oc.width - 2, oc.height - 2);
+  ctx.strokeRect(1, 1, CANVAS_W * scale - 2, CANVAS_H * scale - 2);
+
   for (const box of container.querySelectorAll(".design-box")) {
     await new Promise(resolve => {
       const img = new Image();
@@ -436,6 +470,20 @@ async function saveAsPNG(idx) {
       img.src = box.style.backgroundImage.replace(/url\(["']?/, "").replace(/["']?\)$/, "");
     });
   }
+
+  // Text list — lives entirely in the extra appended space, below the design
+  const textAreaY = CANVAS_H * scale;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, textAreaY, oc.width, textAreaHeight * scale);
+
+  ctx.fillStyle = "#000";
+  ctx.font = `${18 * scale}px sans-serif`;
+  ctx.textBaseline = "top";
+  lines.forEach((line, i) => {
+    const y = textAreaY + (textPadding + i * textLineHeight) * scale;
+    ctx.fillText(line, textPadding * scale, y);
+  });
+
   const a    = document.createElement("a");
   a.href     = oc.toDataURL("image/png");
   a.download = `order-${idx + 1}-${new Date().toISOString().slice(0, 10)}.png`;

@@ -498,3 +498,85 @@ body.modal-open {
     padding: 8px 6px;
   }
 }
+
+/* ===========================
+  LANDSCAPE
+=========================== */
+@media (orientation: landscape) {
+
+  /* Frame reflows into a row: top-ui | thumb-bar | canvas, left to right */
+  .editor-frame {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    max-width: 100vw;
+    height: 100dvh;
+    gap: 16px;
+    padding: 12px;
+  }
+
+  /* Top-ui becomes a vertical column of controls instead of a horizontal bar */
+  .top-ui {
+    flex-direction: column;
+    width: auto;
+    height: 100%;
+    padding: 0;
+    gap: 16px;
+    justify-content: flex-start;
+  }
+
+  /* Button labels: stacked letters, upright, reading top-to-bottom */
+  .top-ui button {
+    writing-mode: vertical-lr;
+    text-orientation: upright;
+    letter-spacing: 2px;
+    padding: 10px 6px;
+    height: auto;
+    width: auto;
+  }
+
+  .info-btn {
+    writing-mode: vertical-lr;
+    text-orientation: upright;
+    height: auto;
+    width: auto;
+    padding: 10px 6px;
+  }
+
+  /* Thumb grid: same 4x2 shape, just smaller to fit alongside canvas */
+  .thumb-bar {
+    grid-template-columns: repeat(4, 44px);
+    grid-template-rows: repeat(2, 44px);
+    gap: 10px 16px;
+    margin-top: 0;
+  }
+
+  .thumb {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Canvas keeps its 5:7 shape — just sized against height instead of width,
+     since height is now the limiting dimension in a wide viewport */
+  .canvas-container {
+    width: auto;
+    height: 100%;
+    margin-top: 0;
+  }
+
+  .canvas-wrap {
+    width: auto;
+    height: 100%;
+    max-width: none;
+    max-height: 100%;
+    /* aspect-ratio: 5/7 already set in base rule — this keeps the shape,
+       just lets height drive the size instead of width */
+  }
+
+  /* ReadFirst popup — wider now, so sentences wrap less */
+  .help-popup {
+    width: min(420px, 60vw);
+  }
+
+}
