@@ -284,12 +284,12 @@ footer a:active {
     { category: "Blender 3D animations", type: "video", thumb: "images/blender/02.jpg", src: "videos/blender/02.mp4", title: "Blender anim-02" },
     { category: "Blender 3D animations", type: "video", thumb: "images/blender/03.jpg", src: "videos/blender/03.mp4", title: "Blender anim-03" },
     { category: "Blender 3D animations", type: "video", thumb: "images/blender/04.jpg", src: "videos/blender/04.mp4", title: "Blender anim-04" },
-    { category: "Blender 3D animations", type: "video", thumb: "images/blender/05.jpg", src: "videos/blender/blender-05-fixed.mp4", title: "Quadruped locomotion" },
+    { category: "Blender 3D animations", type: "video", thumb: "images/blender/05.jpg", src: "videos/blender/05.mp4", title: "Quadruped locomotion" },
 
-    { category: "Technical projects", type: "image", thumb: "images/techproject/01.jpg", src: "images/techproject/01.jpg", title: "Microcontroller-01" },
-    { category: "Technical projects", type: "image", thumb: "images/techproject/02.jpg", src: "images/techproject/02.jpg", title: "Microcontroller-02" },
-    { category: "Technical projects", type: "video", thumb: "images/techproject/03.jpg", src: "videos/techproject/esp32-install.mp4", title: "Alarm system" },
-    { category: "Technical projects", type: "video", thumb: "images/techproject/04.jpg", src: "videos/techproject/mechanism_combo.mp4", title: "Mechanism combo" },
+    { category: "Technical projects", type: "image", thumb: "images/techprojects/01.jpg", src: "images/techprojects/01.jpg", title: "Microcontroller-01" },
+    { category: "Technical projects", type: "image", thumb: "images/techprojects/02.jpg", src: "images/techprojects/02.jpg", title: "Microcontroller-02" },
+    { category: "Technical projects", type: "video", thumb: "images/techprojects/03.jpg", src: "videos/techprojects/esp32-install.mp4", title: "Alarm system" },
+    { category: "Technical projects", type: "video", thumb: "images/techprojects/04.jpg", src: "videos/techprojects/mechanism_combo.mp4", title: "Mechanism combo" },
 
     { category: "Broad & High", type: "youtube", thumb: "https://img.youtube.com/vi/u_VxwjE8hRo/hqdefault.jpg", src: "u_VxwjE8hRo", title: "Broad & High" },
   ];
@@ -355,11 +355,18 @@ footer a:active {
   mediaEl = document.createElement("video");
   mediaEl.src = work.src;
   if (work.poster) mediaEl.poster = work.poster;
+
   mediaEl.controls = true;
+  mediaEl.autoplay = true;
+  mediaEl.muted = true;
+  mediaEl.loop = true;
   mediaEl.playsInline = true;
   mediaEl.setAttribute("playsinline", "");
-  mediaEl.preload = "metadata";
-  } else {
+  mediaEl.preload = "auto";
+
+  mediaEl.style.maxWidth = "90vw";
+  mediaEl.style.maxHeight = "88vh";
+} else {
       mediaEl = document.createElement("img");
       mediaEl.src = work.src;
       mediaEl.alt = work.title;
