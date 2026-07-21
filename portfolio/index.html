@@ -227,6 +227,18 @@ footer a:active {
 }
 
 @media (max-width: 600px) {
+  .lightbox-content {
+    max-width: 95vw;
+    max-height: 80vh;
+  }
+
+  .lightbox-content img,
+  .lightbox-content video {
+    max-width: 85vw;
+    max-height: 65vh;
+    object-fit: contain;
+  }
+
   .lightbox-nav {
     font-size: 2rem;
     padding: 0.5rem;
@@ -234,11 +246,11 @@ footer a:active {
   }
 
   .lightbox-nav.prev {
-    left: 10%;
+    left: 5px;
   }
 
   .lightbox-nav.next {
-    right: 10%;
+    right: 5px;
   }
 }
 
