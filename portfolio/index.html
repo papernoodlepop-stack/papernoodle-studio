@@ -233,19 +233,23 @@ footer a:active {
 
   .lightbox-content {
     max-width: 95vw;
-    max-height: 90vh;
+    max-height: 92vh;
   }
 
-  .lightbox-content img,
+  .lightbox-content img {
+    max-width: 92vw;
+    max-height: 75vh;
+    object-fit: contain;
+  }
+
   .lightbox-content video {
     max-width: 92vw;
-    max-height: 78vh;
+    max-height: 62vh;
     object-fit: contain;
   }
 
   .lightbox-caption {
-    font-size: 0.75rem;
-    margin-top: 0.5rem;
+    display: none;
   }
 
   .lightbox-nav {
