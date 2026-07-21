@@ -441,11 +441,14 @@ footer a:active {
   }
 
   function openLightbox(index) {
-    currentIndex = index;
-    renderLightboxItem(currentIndex);
-    lightbox.classList.add("open");
-    document.body.style.overflow = "hidden";
-  }
+  currentIndex = index;
+  renderLightboxItem(currentIndex);
+  lightbox.classList.add("open");
+  document.documentElement.style.overflow = "hidden";
+  document.body.style.overflow = "hidden";
+  document.body.style.position = "fixed";
+  document.body.style.width = "100%";
+}
 
   function stopActiveMedia() {
     // native video: pause it. youtube iframe: remove it (no direct pause API
@@ -457,10 +460,13 @@ footer a:active {
   }
 
   function closeLightbox() {
-    stopActiveMedia();
-    lightbox.classList.remove("open");
-    document.body.style.overflow = "";
-  }
+  stopActiveMedia();
+  lightbox.classList.remove("open");
+  document.documentElement.style.overflow = "";
+  document.body.style.overflow = "";
+  document.body.style.position = "";
+  document.body.style.width = "";
+}
 
   function showNext(offset) {
     stopActiveMedia();
