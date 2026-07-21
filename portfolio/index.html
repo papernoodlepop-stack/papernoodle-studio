@@ -353,21 +353,12 @@ footer a:active {
       mediaEl.style.borderRadius = "4px";
     } else if (work.type === "video") {
       mediaEl = document.createElement("video");
-      mediaEl.muted = true;
-      mediaEl.setAttribute("muted", "");
-      mediaEl.playsInline = true;
-      mediaEl.setAttribute("playsinline", "");
-      mediaEl.controls = true;
-      mediaEl.preload = "auto";
-      if (work.poster) mediaEl.poster = work.poster;
       mediaEl.src = work.src;
-      // explicit play() call — some mobile browsers don't sync the native
-      // controls' play/pause icon right away when relying on the autoplay
-      // attribute alone, causing the big play-button overlay to linger even
-      // though playback has actually started underneath.
-      mediaEl.addEventListener("loadedmetadata", () => {
-        mediaEl.play().catch(() => {});
-      });
+      if (work.poster) mediaEl.poster = work.poster;
+      mediaEl.controls = true;
+      mediaEl.autoplay = true;
+      mediaEl.playsInline = true;
+      mediaEl.preload = "metadata";
     } else {
       mediaEl = document.createElement("img");
       mediaEl.src = work.src;
