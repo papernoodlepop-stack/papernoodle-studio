@@ -168,16 +168,19 @@
   }
 
   .lightbox-close {
-    position: absolute;
-    top: -44px;
-    right: -6px;
-    background: none;
+    position: fixed;
+    top: 1rem;
+    right: 1.2rem;
+    background: rgba(8,8,7,0.6);
     border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
     color: var(--text-primary);
     font-size: 1.8rem;
     line-height: 1;
     cursor: pointer;
-    padding: 6px 10px;
+    z-index: 1001;
   }
   .lightbox-close:hover { color: var(--accent); }
 
