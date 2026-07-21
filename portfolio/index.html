@@ -192,30 +192,47 @@ footer a:active {
   .lightbox-close:hover { color: var(--accent); }
 
   .lightbox-nav {
-    position: fixed;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 2000;
-    display: block;
-    background: none;
-    border: none;
-    color: var(--text-primary);
-    font-size: 2.2rem;
-    cursor: pointer;
-    padding: 0.5rem 1rem;
-    opacity: 0.65;
-    transition: opacity 0.2s ease;
-  }
-  .lightbox-nav:hover { opacity: 1; }
-  .lightbox-nav.prev { left: 0; }
-  .lightbox-nav.next { right: 0; }
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 2.2rem;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  opacity: 0.65;
+  transition: opacity 0.2s ease;
+}
 
-  @media (max-width: 600px) {
-    header.site-header { padding: 2rem 1.2rem 1.5rem; }
-    main { padding: 0.5rem 1.2rem 3rem; }
-    .grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.5rem; }
-    .lightbox-nav { font-size: 1.6rem; padding: 0.4rem 0.6rem; }
+.lightbox-nav:hover {
+  opacity: 1;
+}
+
+.lightbox-nav.prev {
+  left: 0.5rem;
+}
+
+.lightbox-nav.next {
+  right: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  .lightbox-nav {
+    font-size: 2rem;
+    padding: 0.5rem;
+    top: 50%;
   }
+
+  .lightbox-nav.prev {
+    left: 0;
+  }
+
+  .lightbox-nav.next {
+    right: 0;
+  }
+}
+
 </style>
 </head>
 <body>
