@@ -195,6 +195,8 @@ footer a:active {
     position: fixed;
     top: 50%;
     transform: translateY(-50%);
+    z-index: 2000;
+    display: block;
     background: none;
     border: none;
     color: var(--text-primary);
@@ -205,8 +207,8 @@ footer a:active {
     transition: opacity 0.2s ease;
   }
   .lightbox-nav:hover { opacity: 1; }
-  .lightbox-nav.prev { left: 0.5rem; }
-  .lightbox-nav.next { right: 0.5rem; }
+  .lightbox-nav.prev { left: 0; }
+  .lightbox-nav.next { right: 0; }
 
   @media (max-width: 600px) {
     header.site-header { padding: 2rem 1.2rem 1.5rem; }
