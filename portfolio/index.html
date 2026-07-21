@@ -357,8 +357,16 @@ footer a:active {
       if (work.poster) mediaEl.poster = work.poster;
       mediaEl.controls = true;
       mediaEl.autoplay = true;
+      mediaEl.muted = true;
       mediaEl.playsInline = true;
       mediaEl.preload = "auto";
+      // explicit play() call — some mobile browsers don't sync the native
+      // controls' play/pause icon right away when relying on the autoplay
+      // attribute alone, causing the big play-button overlay to linger even
+      // though playback has actually started underneath.
+      mediaEl.addEventListener("loadedmetadata", () => {
+        mediaEl.play().catch(() => {});
+      });
     } else {
       mediaEl = document.createElement("img");
       mediaEl.src = work.src;
