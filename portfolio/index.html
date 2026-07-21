@@ -131,6 +131,25 @@ footer a:active {
   color: #bebebe;
 }
 
+.sound-toggle {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sound-toggle:hover { background: rgba(0,0,0,0.85); }
+
   /* Lightbox */
   .lightbox {
   position: fixed;
@@ -411,7 +430,7 @@ footer a:active {
   mediaEl.src = work.src;
   if (work.poster) mediaEl.poster = work.poster;
 
-  mediaEl.controls = true;
+  mediaEl.controls = false; // custom controls instead — see sound button below
   mediaEl.autoplay = true;
   mediaEl.muted = true;
   mediaEl.loop = true;
@@ -438,8 +457,30 @@ footer a:active {
     caption.textContent = work.title;
 
     lightboxContent.appendChild(closeBtn);
-    lightboxContent.appendChild(mediaEl);
-    lightboxContent.appendChild(caption);
+
+// Wrap video + sound button together so the button can be positioned
+// relative to the video itself, not the whole lightbox.
+if (work.type === "video") {
+  const wrapper = document.createElement("div");
+  wrapper.style.position = "relative";
+  wrapper.style.display = "inline-block";
+  wrapper.appendChild(mediaEl);
+
+  const soundBtn = document.createElement("button");
+  soundBtn.className = "sound-toggle";
+  soundBtn.innerHTML = "🔇 Tap for sound";
+  soundBtn.addEventListener("click", () => {
+    mediaEl.muted = !mediaEl.muted;
+    soundBtn.innerHTML = mediaEl.muted ? "🔇 Tap for sound" : "🔊 Sound on";
+  });
+  wrapper.appendChild(soundBtn);
+
+  lightboxContent.appendChild(wrapper);
+} else {
+  lightboxContent.appendChild(mediaEl);
+}
+
+lightboxContent.appendChild(caption);
   }
 
   function openLightbox(index) {
